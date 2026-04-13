@@ -220,16 +220,16 @@ elif page == "Data Cleaning":
 
     df_clean = df.copy()
     # ------------------ DEMO: ADD MISSING VALUES ------------------
-st.subheader("🧪 Demo Mode (Add Missing Values)")
+    st.subheader("🧪 Demo Mode (Add Missing Values)")
 
-add_missing = st.checkbox("Introduce Missing Values for Demo")
+    add_missing = st.checkbox("Introduce Missing Values for Demo")
 
-if add_missing:
-    percent = st.slider("Percentage of Missing Data", 1, 20, 5)
+    if add_missing:
+        percent = st.slider("Percentage of Missing Data", 1, 20, 5)
 
-    df_nan = df_clean.copy()
+        df_nan = df_clean.copy()
 
-    np.random.seed(42)
+        np.random.seed(42)
 
     for col in df_nan.columns:
         df_nan.loc[
