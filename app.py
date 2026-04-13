@@ -220,8 +220,16 @@ elif page == "Data Cleaning":
 
     df_clean = df.copy()
 
-    # Missing values
-    missing_option = st.selectbox("Missing Handling", ["None", "Drop", "Mean", "Median"])
+    st.subheader("⚙️ Select Cleaning Options")
+
+    col1, col2 = st.columns(2)
+
+    # ------------------ MISSING ------------------
+    with col1:
+        missing_option = st.selectbox(
+            "Missing Handling",
+            ["None", "Drop", "Mean", "Median"]
+        )
 
     if missing_option == "Drop":
         df_clean = df_clean.dropna()
@@ -230,8 +238,12 @@ elif page == "Data Cleaning":
     elif missing_option == "Median":
         df_clean = df_clean.fillna(df_clean.median())
 
-    # Outliers
-    outlier_option = st.selectbox("Outlier Handling", ["None", "IQR", "Z-Score"])
+    # ------------------ OUTLIERS ------------------
+    with col2:
+        outlier_option = st.selectbox(
+            "Outlier Handling",
+            ["None", "IQR", "Z-Score"]
+        )
 
     if outlier_option == "IQR":
         Q1 = df_clean.quantile(0.25)
@@ -246,11 +258,43 @@ elif page == "Data Cleaning":
         z = np.abs(stats.zscore(df_clean))
         df_clean = df_clean[(z < 3).all(axis=1)]
 
-    st.write("Cleaned Data Shape:", df_clean.shape)
-    st.dataframe(df_clean.head())
-
+    # ------------------ SAVE STATE ------------------
     st.session_state["df_clean"] = df_clean
 
+    # ------------------ LIVE UPDATE METRICS ------------------
+    st.subheader("📊 Impact of Cleaning")
+
+    col3, col4 = st.columns(2)
+    col3.metric("Original Rows", len(df))
+    col4.metric("Cleaned Rows", len(df_clean))
+
+    st.write("Missing Values After Cleaning:")
+    st.write(df_clean.isnull().sum())
+
+    # ------------------ LIVE MODEL PREVIEW ------------------
+    st.subheader("🤖 Instant Model Preview")
+
+    X = df_clean.drop('quality', axis=1)
+    y = df_clean['quality']
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+
+    model = RandomForestRegressor()
+    model.fit(X_train, y_train)
+
+    y_pred = model.predict(X_test)
+
+    col5, col6 = st.columns(2)
+    col5.metric("R2 Score", round(r2_score(y_test, y_pred), 4))
+    col6.metric("MAE", round(mean_absolute_error(y_test, y_pred), 4))
+
+    # ------------------ PREVIEW ------------------
+    st.subheader("Preview Cleaned Data")
+    st.dataframe(df_clean.head())
 # ------------------ FEATURE SELECTION ------------------
 elif page == "Feature Selection":
     st.title("🎯 Feature Selection")
