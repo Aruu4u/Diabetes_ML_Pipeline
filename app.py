@@ -2,13 +2,12 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import plotly.graph_objects as go
 
 from sklearn.model_selection import train_test_split, cross_val_score, KFold
 from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LinearRegression, Lasso
-from sklearn.metrics import mean_absolute_error, r2_score
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression, Lasso
+from sklearn.metrics import accuracy_score
 
 # ------------------ CONFIG ------------------
 st.set_page_config(page_title="ML Pipeline Dashboard", layout="wide")
@@ -23,8 +22,8 @@ st.markdown("""
 # ------------------ LOAD DATA ------------------
 @st.cache_data
 def load_data():
-    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv"
-    return pd.read_csv(url, sep=';')
+    url = "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv"
+    return pd.read_csv(url)
 
 df = load_data()
 
@@ -41,24 +40,26 @@ page = st.sidebar.selectbox("Navigate", [
 
 # ------------------ DASHBOARD ------------------
 if page == "Dashboard":
-    st.title("🍷 Wine Quality Prediction")
+    st.title("🚢 Titanic Survival Prediction")
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Samples", len(df))
     col2.metric("Features", len(df.columns)-1)
-    col3.metric("Missing", df.isnull().sum().sum())
-    col4.metric("Target", "Quality")
+    col3.metric("Missing Values", df.isnull().sum().sum())
+    col4.metric("Target", "Survived")
 
     st.dataframe(df.head())
 
-# ------------------ EDA (RED THEME) ------------------
+# ------------------ EDA ------------------
 elif page == "EDA":
     st.title("📊 Exploratory Data Analysis")
 
-    feature = st.selectbox("Select Feature", df.columns)
+    numeric_df = df.select_dtypes(include=np.number)
+
+    feature = st.selectbox("Select Feature", numeric_df.columns)
 
     fig = px.histogram(
-        df, x=feature, marginal="box",
+        numeric_df, x=feature, marginal="box",
         color_discrete_sequence=["#FF4B4B"]  # RED
     )
     st.plotly_chart(fig, use_container_width=True)
@@ -66,9 +67,9 @@ elif page == "EDA":
     st.subheader("Correlation Matrix")
 
     fig = px.imshow(
-        df.corr(),
+        numeric_df.corr(),
         text_auto=True,
-        color_continuous_scale="Reds"  # RED SCALE
+        color_continuous_scale="Reds"
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -78,90 +79,48 @@ elif page == "Data Cleaning":
 
     df_clean = df.copy()
 
-    # -------- DEMO MISSING VALUES --------
-    st.subheader("🧪 Demo Mode")
-
-    add_missing = st.checkbox("Introduce Missing Values")
-
-    if add_missing:
-        percent = st.slider("Missing %", 1, 20, 5)
-
-        df_nan = df_clean.copy()
-        np.random.seed(42)
-
-        for col in df_nan.columns:
-            df_nan.loc[df_nan.sample(frac=percent/100).index, col] = np.nan
-
-        df_clean = df_nan
-        st.warning(f"{percent}% missing values added!")
-
     st.write("Missing Values Before Cleaning:")
     st.write(df_clean.isnull().sum())
 
-    # -------- CLEANING OPTIONS --------
     col1, col2 = st.columns(2)
 
+    # -------- MISSING HANDLING --------
     with col1:
         missing_option = st.selectbox("Missing Handling", ["None", "Drop", "Mean", "Median"])
 
     if missing_option == "Drop":
         df_clean = df_clean.dropna()
     elif missing_option == "Mean":
-        df_clean = df_clean.fillna(df_clean.mean())
+        df_clean = df_clean.fillna(df_clean.mean(numeric_only=True))
     elif missing_option == "Median":
-        df_clean = df_clean.fillna(df_clean.median())
+        df_clean = df_clean.fillna(df_clean.median(numeric_only=True))
 
+    # -------- OUTLIER HANDLING --------
     with col2:
-        outlier_option = st.selectbox("Outlier Handling", ["None", "IQR", "Z-Score"])
+        outlier_option = st.selectbox("Outlier Handling", ["None", "IQR"])
+
+    numeric_df = df_clean.select_dtypes(include=np.number)
 
     if outlier_option == "IQR":
-        Q1 = df_clean.quantile(0.25)
-        Q3 = df_clean.quantile(0.75)
+        Q1 = numeric_df.quantile(0.25)
+        Q3 = numeric_df.quantile(0.75)
         IQR = Q3 - Q1
-        df_clean = df_clean[
-            ~((df_clean < (Q1 - 1.5 * IQR)) | (df_clean > (Q3 + 1.5 * IQR))).any(axis=1)
-        ]
+        mask = ~((numeric_df < (Q1 - 1.5 * IQR)) | (numeric_df > (Q3 + 1.5 * IQR))).any(axis=1)
+        df_clean = df_clean[mask]
 
-    elif outlier_option == "Z-Score":
-        from scipy import stats
-        z = np.abs(stats.zscore(df_clean))
-        df_clean = df_clean[(z < 3).all(axis=1)]
+    # -------- DROP NON-NUMERIC --------
+    df_clean = df_clean.select_dtypes(include=np.number)
 
-    # -------- SAVE STATE --------
     st.session_state["df_clean"] = df_clean
 
-    # -------- RESULTS --------
-    st.subheader("📊 Impact")
+    st.subheader("📊 After Cleaning")
 
     col3, col4 = st.columns(2)
     col3.metric("Original Rows", len(df))
     col4.metric("Cleaned Rows", len(df_clean))
 
-    st.write("Missing After Cleaning:")
+    st.write("Missing Values After Cleaning:")
     st.write(df_clean.isnull().sum())
-
-    st.bar_chart(df_clean.isnull().sum())
-
-    # -------- MODEL PREVIEW --------
-    st.subheader("🤖 Instant Model")
-
-    X = df_clean.drop('quality', axis=1)
-    y = df_clean['quality']
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-
-    scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
-
-    model = RandomForestRegressor()
-    model.fit(X_train, y_train)
-
-    y_pred = model.predict(X_test)
-
-    col5, col6 = st.columns(2)
-    col5.metric("R2", round(r2_score(y_test, y_pred), 4))
-    col6.metric("MAE", round(mean_absolute_error(y_test, y_pred), 4))
 
     st.dataframe(df_clean.head())
 
@@ -169,17 +128,17 @@ elif page == "Data Cleaning":
 elif page == "Feature Selection":
     st.title("🎯 Feature Selection")
 
-    df_used = st.session_state.get("df_clean", df)
+    df_used = st.session_state.get("df_clean", df.select_dtypes(include=np.number))
 
-    X = df_used.drop('quality', axis=1)
-    y = df_used['quality']
+    X = df_used.drop('Survived', axis=1)
+    y = df_used['Survived']
 
-    method = st.selectbox("Method", ["None", "Random Forest", "Correlation", "Lasso"])
+    method = st.selectbox("Method", ["None", "Random Forest", "Correlation"])
 
     selected_features = X.columns
 
     if method == "Random Forest":
-        rf = RandomForestRegressor()
+        rf = RandomForestClassifier()
         rf.fit(X, y)
         importance = pd.Series(rf.feature_importances_, index=X.columns)
         st.bar_chart(importance.sort_values())
@@ -188,39 +147,27 @@ elif page == "Feature Selection":
         selected_features = importance.sort_values(ascending=False).head(top_n).index
 
     elif method == "Correlation":
-        corr = df_used.corr()['quality'].abs().drop('quality')
+        corr = df_used.corr()['Survived'].abs().drop('Survived')
         st.bar_chart(corr)
 
         top_n = st.slider("Top Features", 1, len(X.columns), 5)
         selected_features = corr.sort_values(ascending=False).head(top_n).index
 
-    elif method == "Lasso":
-        scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(X)
-
-        lasso = Lasso(alpha=0.01)
-        lasso.fit(X_scaled, y)
-
-        coef = pd.Series(abs(lasso.coef_), index=X.columns)
-        st.bar_chart(coef)
-
-        selected_features = coef[coef > 0].index
-
-    st.write("Selected:", list(selected_features))
+    st.write("Selected Features:", list(selected_features))
     st.session_state["selected_features"] = list(selected_features)
 
 # ------------------ MODEL TRAINING ------------------
 elif page == "Model Training":
     st.title("🤖 Model Training")
 
-    df_used = st.session_state.get("df_clean", df)
-    features = st.session_state.get("selected_features", df.columns[:-1])
+    df_used = st.session_state.get("df_clean", df.select_dtypes(include=np.number))
+    features = st.session_state.get("selected_features", df_used.columns.drop('Survived'))
 
     X = df_used[features]
-    y = df_used['quality']
+    y = df_used['Survived']
 
     test_size = st.slider("Test Size", 0.1, 0.4, 0.2)
-    model_type = st.selectbox("Model", ["Linear Regression", "Random Forest"])
+    model_type = st.selectbox("Model", ["Logistic Regression", "Random Forest"])
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
 
@@ -228,33 +175,34 @@ elif page == "Model Training":
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
-    if st.button("Train"):
-        model = LinearRegression() if model_type == "Linear Regression" else RandomForestRegressor()
+    if st.button("Train Model"):
+        model = LogisticRegression() if model_type == "Logistic Regression" else RandomForestClassifier()
 
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
 
         col1, col2 = st.columns(2)
-        col1.metric("R2", round(r2_score(y_test, y_pred), 4))
-        col2.metric("MAE", round(mean_absolute_error(y_test, y_pred), 4))
+        col1.metric("Accuracy", round(accuracy_score(y_test, y_pred), 4))
 
         scores = cross_val_score(model, X, y, cv=KFold(5))
+        col2.metric("Avg CV Score", round(scores.mean(), 4))
+
         st.line_chart(scores)
 
 # ------------------ PREDICTION ------------------
 elif page == "Prediction":
     st.title("🔮 Prediction")
 
-    df_used = st.session_state.get("df_clean", df)
-    features = st.session_state.get("selected_features", df.columns[:-1])
+    df_used = st.session_state.get("df_clean", df.select_dtypes(include=np.number))
+    features = st.session_state.get("selected_features", df_used.columns.drop('Survived'))
 
     X = df_used[features]
-    y = df_used['quality']
+    y = df_used['Survived']
 
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
-    model = RandomForestRegressor()
+    model = RandomForestClassifier()
     model.fit(X_scaled, y)
 
     user_input = []
@@ -265,4 +213,4 @@ elif page == "Prediction":
     input_scaled = scaler.transform([user_input])
     prediction = model.predict(input_scaled)[0]
 
-    st.success(f"Predicted Quality: {round(prediction,2)}")
+    st.success("Survived" if prediction == 1 else "Not Survived")
