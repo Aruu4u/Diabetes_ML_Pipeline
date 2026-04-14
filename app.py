@@ -217,7 +217,7 @@ elif page == "Data Cleaning":
     
     # ───────── ZERO VALUES ─────────
     with col_zero:
-        # st.markdown("**Invalid Zero Values**")
+        st.markdown("**Invalid Zero Values**")
         
         # zero_series = pd.Series(zero_counts)
         # zero_series = zero_series[zero_series > 0]
