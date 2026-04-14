@@ -1295,7 +1295,7 @@ elif S.step == 4:
 elif S.step == 5:
     section_header("Step 5 · Feature Selection")
 
-    df = S.df_clean or S.df
+    df = get_df()
     feats = S.selected_features or [c for c in df.columns if c != S.target]
     num_cols = df[feats].select_dtypes(include=np.number).columns.tolist()
 
@@ -1391,7 +1391,7 @@ elif S.step == 6:
 
     if st.button("Apply Split"):
         from sklearn.model_selection import train_test_split
-        df = S.df_clean or S.df
+        df = get_df()
         feats = S.feature_selected or S.selected_features
         feats = [f for f in feats if f in df.columns]
 
