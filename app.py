@@ -868,7 +868,8 @@ def init_state():
 
 init_state()
 S = st.session_state
-
+def get_df():
+    return S.df_clean if S.df_clean is not None else S.df
 
 # ══════════════════════════════════════════════════════════
 #  NAVIGATION HELPERS
