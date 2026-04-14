@@ -211,7 +211,7 @@ elif page == "Data Cleaning":
 
     # col_mv, col_out = st.columns(2)
             # ── Before-cleaning stats ──
-    st.subheader("Before Cleaning — Current Data Issues")
+    st.subheader("Before Cleaning — Current Data 1Issues")
     
     col_zero, col_mv, col_out = st.columns(3)
     
