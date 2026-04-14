@@ -264,8 +264,13 @@ elif page == "Data Cleaning":
     
     # ───────── MISSING VALUES ─────────
     with col_mv:
-        st.markdown("**Missing Values**")
-        missing = df.isnull().sum()
+        temp_df = df.copy()
+
+# convert selected zero columns to NaN temporarily
+        for col in suggested_invalid_cols:
+            temp_df[col] = temp_df[col].replace(0, np.nan)
+        
+        missing = temp_df.isnull().sum()
         missing = missing[missing > 0]
     
         if missing.empty:
