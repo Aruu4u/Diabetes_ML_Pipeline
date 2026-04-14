@@ -217,13 +217,40 @@ elif page == "Data Cleaning":
     
     # ───────── ZERO VALUES ─────────
     with col_zero:
-        st.markdown("**Invalid Zero Values**")
+        # st.markdown("**Invalid Zero Values**")
+        
+        # zero_series = pd.Series(zero_counts)
+        # zero_series = zero_series[zero_series > 0]
+    
+        # if zero_series.empty:
+        #     st.success("No zero issues")
+        # else:
+        #     st.dataframe(
+        #         zero_series.rename("Zero Count")
+        #                    .reset_index()
+        #                    .rename(columns={"index": "Column"}),
+        #         use_container_width=True
+        #     )
+        zero_counts = {}
+        for col in numeric_df_raw.columns:
+            zero_counts[col] = int((numeric_df_raw[col] == 0).sum())
+        suggested_invalid_cols = []
+        
+        for col in numeric_df_raw.columns:
+            zero_count = int((numeric_df_raw[col] == 0).sum())
+            zero_counts[col] = zero_count
+        
+        # Hardcoded priority
+            if col in invalid_zero_columns:
+                suggested_invalid_cols.append(col)
+        
+        
         
         zero_series = pd.Series(zero_counts)
         zero_series = zero_series[zero_series > 0]
-    
+        
         if zero_series.empty:
-            st.success("No zero issues")
+            st.success("No suspicious zero values found!")
         else:
             st.dataframe(
                 zero_series.rename("Zero Count")
