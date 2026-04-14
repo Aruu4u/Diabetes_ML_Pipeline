@@ -171,21 +171,21 @@ elif page == "Data Cleaning":
         invalid_zero_columns = ["RM"]
     
 
-    # ── ZERO VALUE DETECTION ──
-    st.subheader("⚠️ Biologically Invalid Zero Values Detection")
+    # # ── ZERO VALUE DETECTION ──
+    # st.subheader("⚠️ Biologically Invalid Zero Values Detection")
 
-    zero_counts = {}
-    for col in numeric_df_raw.columns:
-        zero_counts[col] = int((numeric_df_raw[col] == 0).sum())
-    suggested_invalid_cols = []
+    # zero_counts = {}
+    # for col in numeric_df_raw.columns:
+    #     zero_counts[col] = int((numeric_df_raw[col] == 0).sum())
+    # suggested_invalid_cols = []
 
-    for col in numeric_df_raw.columns:
-        zero_count = int((numeric_df_raw[col] == 0).sum())
-        zero_counts[col] = zero_count
+    # for col in numeric_df_raw.columns:
+    #     zero_count = int((numeric_df_raw[col] == 0).sum())
+    #     zero_counts[col] = zero_count
 
-    # Hardcoded priority
-        if col in invalid_zero_columns:
-            suggested_invalid_cols.append(col)
+    # # Hardcoded priority
+    #     if col in invalid_zero_columns:
+    #         suggested_invalid_cols.append(col)
 
 
     
@@ -274,36 +274,36 @@ elif page == "Data Cleaning":
 
 
 
-    with col_mv:
-        st.markdown("**Missing Values per Column**")
-        missing = df.isnull().sum()
-        missing = missing[missing > 0]
-        if missing.empty:
-            st.success("No missing values found!")
-        else:
-            st.dataframe(
-                missing.rename("Missing Count")
-                       .reset_index()
-                       .rename(columns={"index": "Column"}),
-                use_container_width=True
-            )
+    # with col_mv:
+    #     st.markdown("**Missing Values per Column**")
+    #     missing = df.isnull().sum()
+    #     missing = missing[missing > 0]
+    #     if missing.empty:
+    #         st.success("No missing values found!")
+    #     else:
+    #         st.dataframe(
+    #             missing.rename("Missing Count")
+    #                    .reset_index()
+    #                    .rename(columns={"index": "Column"}),
+    #             use_container_width=True
+    #         )
 
-    with col_out:
-        st.markdown("**Outliers per Numeric Column (IQR)**")
-        if numeric_df_raw.empty:
-            st.info("No numeric columns.")
-        else:
-            outlier_counts = get_per_col_outliers(numeric_df_raw)
-            outlier_counts = outlier_counts[outlier_counts > 0]
-            if outlier_counts.empty:
-                st.success("No outliers detected!")
-            else:
-                st.dataframe(
-                    outlier_counts.rename("Outlier Count")
-                                  .reset_index()
-                                  .rename(columns={"index": "Column"}),
-                    use_container_width=True
-                )
+    # with col_out:
+    #     st.markdown("**Outliers per Numeric Column (IQR)**")
+    #     if numeric_df_raw.empty:
+    #         st.info("No numeric columns.")
+    #     else:
+    #         outlier_counts = get_per_col_outliers(numeric_df_raw)
+    #         outlier_counts = outlier_counts[outlier_counts > 0]
+    #         if outlier_counts.empty:
+    #             st.success("No outliers detected!")
+    #         else:
+    #             st.dataframe(
+    #                 outlier_counts.rename("Outlier Count")
+    #                               .reset_index()
+    #                               .rename(columns={"index": "Column"}),
+    #                 use_container_width=True
+    #             )
 
     st.markdown("---")
     st.subheader("Cleaning Options")
