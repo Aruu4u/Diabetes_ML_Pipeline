@@ -264,6 +264,7 @@ elif page == "Data Cleaning":
     
     # ───────── MISSING VALUES ─────────
     with col_mv:
+          st.markdown("**Missing Values**")
         temp_df = df.copy()
 
 # convert selected zero columns to NaN temporarily
