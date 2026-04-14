@@ -189,18 +189,18 @@ elif page == "Data Cleaning":
 
 
     
-    zero_series = pd.Series(zero_counts)
-    zero_series = zero_series[zero_series > 0]
+    # zero_series = pd.Series(zero_counts)
+    # zero_series = zero_series[zero_series > 0]
 
-    if zero_series.empty:
-        st.success("No suspicious zero values found!")
-    else:
-        st.dataframe(
-            zero_series.rename("Zero Count")
-                       .reset_index()
-                       .rename(columns={"index": "Column"}),
-            use_container_width=True
-        )
+    # if zero_series.empty:
+    #     st.success("No suspicious zero values found!")
+    # else:
+    #     st.dataframe(
+    #         zero_series.rename("Zero Count")
+    #                    .reset_index()
+    #                    .rename(columns={"index": "Column"}),
+    #         use_container_width=True
+    #     )
 
 
 
