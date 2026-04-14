@@ -213,7 +213,7 @@ elif page == "Data Cleaning":
             # ── Before-cleaning stats ──
     # st.subheader("Before Cleaning — Current Data Issues")
     st.markdown(
-    "<h3 style='text-align: center; color:#4a7cff;'>Before Cleaning — Current Data Issues</h3>",
+    "<h3 style='text-align: center; color:red;'>Before Cleaning — Current Data Issues</h3>",
     unsafe_allow_html=True
     )
     col_zero, col_mv, col_out = st.columns(3)
