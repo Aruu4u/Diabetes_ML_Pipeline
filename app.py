@@ -4,10 +4,13 @@ import numpy as np
 import plotly.express as px
 
 from sklearn.model_selection import train_test_split, cross_val_score, KFold
-from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.metrics import (
+    accuracy_score, classification_report, confusion_matrix,
+    r2_score, mean_squared_error, mean_absolute_error
+)
 
 # ------------------ CONFIG ------------------
 st.set_page_config(page_title="ML Pipeline Dashboard", layout="wide")
@@ -15,9 +18,37 @@ st.set_page_config(page_title="ML Pipeline Dashboard", layout="wide")
 st.markdown("""
 <style>
 .main { background-color: #f5f7f9; }
-.stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0px 2px 10px rgba(0,0,0,0.05); }
+.stMetric {
+    background-color: #ffffff;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0px 2px 10px rgba(0,0,0,0.05);
+}
 </style>
 """, unsafe_allow_html=True)
+
+# ------------------ HELPERS ------------------
+def detect_task_type(series, threshold=10):
+    """Auto-detect if target is classification or regression."""
+    if series.dtype == object or str(series.dtype) == 'category':
+        return "classification"
+    n_unique = series.nunique()
+    if n_unique <= threshold:
+        return "classification"
+    return "regression"
+
+def get_model(model_type, task):
+    if task == "classification":
+        return LogisticRegression(max_iter=1000) if model_type == "Logistic Regression" else RandomForestClassifier(n_estimators=100, random_state=42)
+    else:
+        return LinearRegression() if model_type == "Linear Regression" else RandomForestRegressor(n_estimators=100, random_state=42)
+
+def encode_target(y):
+    """Encode string/object target to numeric for classification."""
+    if y.dtype == object or str(y.dtype) == 'category':
+        le = LabelEncoder()
+        return pd.Series(le.fit_transform(y), name=y.name), le
+    return y, None
 
 # ------------------ LOAD DATA ------------------
 @st.cache_data
@@ -28,7 +59,6 @@ def load_default_data():
 # ------------------ SIDEBAR ------------------
 st.sidebar.title("🛠️ ML Workspace")
 
-# 🔥 FILE UPLOAD
 uploaded_file = st.sidebar.file_uploader("📁 Upload your CSV", type=["csv"])
 
 if uploaded_file is not None:
@@ -38,7 +68,6 @@ else:
     df = load_default_data()
     st.sidebar.info("Using Titanic dataset")
 
-# PAGE NAVIGATION
 page = st.sidebar.selectbox("Navigate", [
     "Dashboard",
     "EDA",
@@ -55,10 +84,18 @@ if page == "Dashboard":
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Samples", len(df))
     col2.metric("Features", len(df.columns))
-    col3.metric("Missing Values", df.isnull().sum().sum())
-    col4.metric("Columns", len(df.columns))
+    col3.metric("Missing Values", int(df.isnull().sum().sum()))
+    col4.metric("Numeric Columns", len(df.select_dtypes(include=np.number).columns))
 
-    st.dataframe(df.head())
+    st.subheader("Raw Data Preview")
+    st.dataframe(df.head(10))
+
+    st.subheader("Data Types")
+    dtype_df = pd.DataFrame({"Column": df.dtypes.index, "Type": df.dtypes.values.astype(str)})
+    st.dataframe(dtype_df, use_container_width=True)
+
+    st.subheader("Summary Statistics")
+    st.dataframe(df.describe(), use_container_width=True)
 
 # ------------------ EDA ------------------
 elif page == "EDA":
@@ -66,22 +103,24 @@ elif page == "EDA":
 
     numeric_df = df.select_dtypes(include=np.number)
 
-    feature = st.selectbox("Select Feature", numeric_df.columns)
+    if numeric_df.empty:
+        st.warning("No numeric columns found.")
+    else:
+        st.subheader("Distribution Plot")
+        feature = st.selectbox("Select Feature", numeric_df.columns)
+        fig = px.histogram(numeric_df, x=feature, marginal="box",
+                           color_discrete_sequence=["#FF4B4B"])
+        st.plotly_chart(fig, use_container_width=True)
 
-    fig = px.histogram(
-        numeric_df, x=feature, marginal="box",
-        color_discrete_sequence=["#FF4B4B"]
-    )
-    st.plotly_chart(fig, use_container_width=True)
+        st.subheader("Correlation Matrix")
+        fig2 = px.imshow(numeric_df.corr().round(2), text_auto=True,
+                         color_continuous_scale="RdBu_r", aspect="auto")
+        st.plotly_chart(fig2, use_container_width=True)
 
-    st.subheader("Correlation Matrix")
-
-    fig = px.imshow(
-        numeric_df.corr(),
-        text_auto=True,
-        color_continuous_scale="Reds"
-    )
-    st.plotly_chart(fig, use_container_width=True)
+        st.subheader("Pairplot (top 5 numeric columns)")
+        top_cols = numeric_df.columns[:5].tolist()
+        fig3 = px.scatter_matrix(numeric_df[top_cols], color_discrete_sequence=["#FF4B4B"])
+        st.plotly_chart(fig3, use_container_width=True)
 
 # ------------------ DATA CLEANING ------------------
 elif page == "Data Cleaning":
@@ -89,44 +128,57 @@ elif page == "Data Cleaning":
 
     df_clean = df.copy()
 
-    st.write("Missing Values Before Cleaning:")
-    st.write(df_clean.isnull().sum())
+    st.subheader("Missing Values Before Cleaning")
+    missing = df_clean.isnull().sum()
+    missing = missing[missing > 0]
+    if missing.empty:
+        st.success("No missing values found!")
+    else:
+        st.dataframe(missing.rename("Missing Count").reset_index(), use_container_width=True)
 
     col1, col2 = st.columns(2)
 
     with col1:
-        missing_option = st.selectbox("Missing Handling", ["None", "Drop", "Mean", "Median"])
-
-    if missing_option == "Drop":
-        df_clean = df_clean.dropna()
-    elif missing_option == "Mean":
-        df_clean = df_clean.fillna(df_clean.mean(numeric_only=True))
-    elif missing_option == "Median":
-        df_clean = df_clean.fillna(df_clean.median(numeric_only=True))
+        missing_option = st.selectbox("Missing Value Handling",
+                                      ["None", "Drop Rows", "Fill Mean", "Fill Median", "Fill Zero"])
 
     with col2:
-        outlier_option = st.selectbox("Outlier Handling", ["None", "IQR"])
+        outlier_option = st.selectbox("Outlier Handling", ["None", "Remove via IQR"])
 
-    numeric_df = df_clean.select_dtypes(include=np.number)
+    # Apply missing value strategy
+    if missing_option == "Drop Rows":
+        df_clean = df_clean.dropna()
+    elif missing_option == "Fill Mean":
+        num_cols = df_clean.select_dtypes(include=np.number).columns
+        df_clean[num_cols] = df_clean[num_cols].fillna(df_clean[num_cols].mean())
+    elif missing_option == "Fill Median":
+        num_cols = df_clean.select_dtypes(include=np.number).columns
+        df_clean[num_cols] = df_clean[num_cols].fillna(df_clean[num_cols].median())
+    elif missing_option == "Fill Zero":
+        num_cols = df_clean.select_dtypes(include=np.number).columns
+        df_clean[num_cols] = df_clean[num_cols].fillna(0)
 
-    if outlier_option == "IQR":
-        Q1 = numeric_df.quantile(0.25)
-        Q3 = numeric_df.quantile(0.75)
+    # Apply outlier strategy (numeric only)
+    if outlier_option == "Remove via IQR":
+        numeric_part = df_clean.select_dtypes(include=np.number)
+        Q1 = numeric_part.quantile(0.25)
+        Q3 = numeric_part.quantile(0.75)
         IQR = Q3 - Q1
-        mask = ~((numeric_df < (Q1 - 1.5 * IQR)) | (numeric_df > (Q3 + 1.5 * IQR))).any(axis=1)
+        mask = ~((numeric_part < (Q1 - 1.5 * IQR)) | (numeric_part > (Q3 + 1.5 * IQR))).any(axis=1)
         df_clean = df_clean[mask]
 
-    df_clean = df_clean.select_dtypes(include=np.number)
+    # Keep numeric columns only for ML
+    df_clean_num = df_clean.select_dtypes(include=np.number)
+    st.session_state["df_clean"] = df_clean_num
+    st.session_state["df_clean_full"] = df_clean  # keep full for column reference
 
-    st.session_state["df_clean"] = df_clean
-
-    st.subheader("After Cleaning")
-
-    col3, col4 = st.columns(2)
+    col3, col4, col5 = st.columns(3)
     col3.metric("Original Rows", len(df))
-    col4.metric("Cleaned Rows", len(df_clean))
+    col4.metric("Cleaned Rows", len(df_clean_num))
+    col5.metric("Numeric Features", len(df_clean_num.columns))
 
-    st.dataframe(df_clean.head())
+    st.subheader("After Cleaning Preview")
+    st.dataframe(df_clean_num.head(), use_container_width=True)
 
 # ------------------ FEATURE SELECTION ------------------
 elif page == "Feature Selection":
@@ -134,96 +186,462 @@ elif page == "Feature Selection":
 
     df_used = st.session_state.get("df_clean", df.select_dtypes(include=np.number))
 
-    target = st.selectbox("Select Target Column", df_used.columns)
+    if df_used.shape[1] < 2:
+        st.error("Need at least 2 numeric columns. Please run Data Cleaning first.")
+        st.stop()
 
-    X = df_used.drop(target, axis=1)
+    target = st.selectbox("Select Target Column", df_used.columns)
+    task = detect_task_type(df_used[target])
+    st.info(f"🔍 Detected task type: **{task.upper()}** "
+            f"(target has {df_used[target].nunique()} unique values)")
+
+    X = df_used.drop(columns=[target])
     y = df_used[target]
 
-    method = st.selectbox("Method", ["None", "Random Forest", "Correlation"])
+    method = st.selectbox("Feature Importance Method", ["None", "Random Forest", "Correlation"])
 
-    selected_features = X.columns
+    selected_features = list(X.columns)
 
     if method == "Random Forest":
-        rf = RandomForestClassifier()
-        rf.fit(X, y)
-        importance = pd.Series(rf.feature_importances_, index=X.columns)
+        try:
+            if task == "classification":
+                y_enc, _ = encode_target(y)
+                # Only use if looks like classification after encoding
+                rf = RandomForestClassifier(n_estimators=50, random_state=42)
+                rf.fit(X.fillna(0), y_enc)
+            else:
+                rf = RandomForestRegressor(n_estimators=50, random_state=42)
+                rf.fit(X.fillna(0), y)
 
-        st.bar_chart(importance.sort_values())
+            importance = pd.Series(rf.feature_importances_, index=X.columns).sort_values(ascending=True)
+            fig = px.bar(importance, orientation='h', color=importance,
+                         color_continuous_scale="Reds",
+                         labels={"value": "Importance", "index": "Feature"},
+                         title="Feature Importances")
+            st.plotly_chart(fig, use_container_width=True)
 
-        top_n = st.slider("Top Features", 1, len(X.columns), 5)
-        selected_features = importance.sort_values(ascending=False).head(top_n).index
+            top_n = st.slider("Top N Features to Keep", 1, len(X.columns), min(5, len(X.columns)))
+            selected_features = importance.sort_values(ascending=False).head(top_n).index.tolist()
+
+        except Exception as e:
+            st.error(f"Random Forest feature selection failed: {e}")
 
     elif method == "Correlation":
-        corr = df_used.corr()[target].abs().drop(target)
-        st.bar_chart(corr)
+        corr = df_used.corr()[target].abs().drop(target).sort_values(ascending=True)
+        fig = px.bar(corr, orientation='h', color=corr,
+                     color_continuous_scale="Blues",
+                     labels={"value": "Correlation", "index": "Feature"},
+                     title="Absolute Correlation with Target")
+        st.plotly_chart(fig, use_container_width=True)
 
-        top_n = st.slider("Top Features", 1, len(X.columns), 5)
-        selected_features = corr.sort_values(ascending=False).head(top_n).index
+        top_n = st.slider("Top N Features to Keep", 1, len(X.columns), min(5, len(X.columns)))
+        selected_features = corr.sort_values(ascending=False).head(top_n).index.tolist()
 
-    st.write("Selected Features:", list(selected_features))
-    st.session_state["selected_features"] = list(selected_features)
+    st.success(f"✅ Selected Features: {selected_features}")
+    st.session_state["selected_features"] = selected_features
     st.session_state["target"] = target
+    st.session_state["task"] = task
 
 # ------------------ MODEL TRAINING ------------------
 elif page == "Model Training":
     st.title("🤖 Model Training")
 
     df_used = st.session_state.get("df_clean", df.select_dtypes(include=np.number))
-    features = st.session_state.get("selected_features", df_used.columns[:-1])
+    features = st.session_state.get("selected_features", list(df_used.columns[:-1]))
     target = st.session_state.get("target", df_used.columns[-1])
 
-    X = df_used[features]
+    # Re-detect task type in case session state missing
+    task = st.session_state.get("task", detect_task_type(df_used[target]))
+    st.info(f"🔍 Task: **{task.upper()}** | Target: **{target}** | Features: **{len(features)}**")
+
+    X = df_used[features].fillna(0)
     y = df_used[target]
 
-    test_size = st.slider("Test Size", 0.1, 0.4, 0.2)
-    model_type = st.selectbox("Model", ["Logistic Regression", "Random Forest"])
+    if task == "classification":
+        y, le = encode_target(y)
+        model_options = ["Logistic Regression", "Random Forest"]
+    else:
+        le = None
+        model_options = ["Linear Regression", "Random Forest"]
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
+    col1, col2 = st.columns(2)
+    with col1:
+        test_size = st.slider("Test Size", 0.1, 0.4, 0.2, step=0.05)
+    with col2:
+        model_type = st.selectbox("Model", model_options)
+
+    cv_folds = st.slider("K-Fold Cross-Validation Folds", 2, 10, 5)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=test_size, random_state=42
+    )
 
     scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
+    X_train_s = scaler.fit_transform(X_train)
+    X_test_s = scaler.transform(X_test)
+    X_all_s = scaler.fit_transform(X)
 
-    if st.button("Train Model"):
-        model = LogisticRegression() if model_type == "Logistic Regression" else RandomForestClassifier()
+    if st.button("🚀 Train Model"):
+        with st.spinner("Training..."):
+            model = get_model(model_type, task)
 
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
+            try:
+                model.fit(X_train_s, y_train)
+                y_pred = model.predict(X_test_s)
 
-        col1, col2 = st.columns(2)
-        col1.metric("Accuracy", round(accuracy_score(y_test, y_pred), 4))
+                st.subheader("📈 Performance Metrics")
 
-        scores = cross_val_score(model, X, y, cv=KFold(5))
-        col2.metric("Avg CV Score", round(scores.mean(), 4))
+                if task == "classification":
+                    acc = accuracy_score(y_test, y_pred)
+                    scores = cross_val_score(model, X_all_s, y, cv=KFold(n_splits=cv_folds, shuffle=True, random_state=42))
 
-        st.line_chart(scores)
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("Test Accuracy", f"{acc:.4f}")
+                    c2.metric(f"Avg CV Score ({cv_folds}-Fold)", f"{scores.mean():.4f}")
+                    c3.metric("CV Std Dev", f"{scores.std():.4f}")
+
+                    st.subheader(f"📊 {cv_folds}-Fold Cross-Validation Scores")
+                    cv_df = pd.DataFrame({"Fold": [f"Fold {i+1}" for i in range(len(scores))], "Accuracy": scores})
+                    fig = px.bar(cv_df, x="Fold", y="Accuracy", color="Accuracy",
+                                 color_continuous_scale="Reds", range_y=[0, 1],
+                                 title="CV Scores per Fold")
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    st.subheader("Classification Report")
+                    report = classification_report(y_test, y_pred, output_dict=True)
+                    st.dataframe(pd.DataFrame(report).T.round(3), use_container_width=True)
+
+                    st.subheader("Confusion Matrix")
+                    cm = confusion_matrix(y_test, y_pred)
+                    fig_cm = px.imshow(cm, text_auto=True, color_continuous_scale="Reds",
+                                       labels={"x": "Predicted", "y": "Actual"},
+                                       title="Confusion Matrix")
+                    st.plotly_chart(fig_cm, use_container_width=True)
+
+                else:  # regression
+                    r2 = r2_score(y_test, y_pred)
+                    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+                    mae = mean_absolute_error(y_test, y_pred)
+                    scores = cross_val_score(model, X_all_s, y, cv=KFold(n_splits=cv_folds, shuffle=True, random_state=42),
+                                             scoring="r2")
+
+                    c1, c2, c3, c4 = st.columns(4)
+                    c1.metric("R² Score", f"{r2:.4f}")
+                    c2.metric("RMSE", f"{rmse:.4f}")
+                    c3.metric("MAE", f"{mae:.4f}")
+                    c4.metric(f"Avg CV R² ({cv_folds}-Fold)", f"{scores.mean():.4f}")
+
+                    st.subheader(f"📊 {cv_folds}-Fold Cross-Validation R² Scores")
+                    cv_df = pd.DataFrame({"Fold": [f"Fold {i+1}" for i in range(len(scores))], "R²": scores})
+                    fig = px.bar(cv_df, x="Fold", y="R²", color="R²",
+                                 color_continuous_scale="Blues",
+                                 title="CV R² Scores per Fold")
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    st.subheader("Actual vs Predicted")
+                    pred_df = pd.DataFrame({"Actual": y_test.values, "Predicted": y_pred})
+                    fig2 = px.scatter(pred_df, x="Actual", y="Predicted",
+                                      trendline="ols", title="Actual vs Predicted",
+                                      color_discrete_sequence=["#FF4B4B"])
+                    st.plotly_chart(fig2, use_container_width=True)
+
+                # Save model artifacts
+                st.session_state["model"] = model
+                st.session_state["scaler"] = scaler
+                st.session_state["le"] = le
+                st.success("✅ Model trained and saved for Prediction!")
+
+            except Exception as e:
+                st.error(f"Training failed: {e}")
+                st.info("Tip: Make sure your target column is appropriate for the detected task type.")
 
 # ------------------ PREDICTION ------------------
 elif page == "Prediction":
     st.title("🔮 Prediction")
 
     df_used = st.session_state.get("df_clean", df.select_dtypes(include=np.number))
-    features = st.session_state.get("selected_features", df_used.columns[:-1])
+    features = st.session_state.get("selected_features", list(df_used.columns[:-1]))
     target = st.session_state.get("target", df_used.columns[-1])
+    task = st.session_state.get("task", detect_task_type(df_used[target]))
 
-    X = df_used[features]
-    y = df_used[target]
+    model = st.session_state.get("model", None)
+    scaler = st.session_state.get("scaler", None)
+    le = st.session_state.get("le", None)
 
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+    if model is None or scaler is None:
+        st.warning("⚠️ No trained model found. Please go to **Model Training** and train a model first.")
+        st.stop()
 
-    model = RandomForestClassifier()
-    model.fit(X_scaled, y)
+    st.info(f"Task: **{task.upper()}** | Target: **{target}** | Model: **{type(model).__name__}**")
+    st.subheader("Adjust Feature Values")
+
+    X = df_used[features].fillna(0)
 
     user_input = []
-    for col in features:
-        val = st.slider(col, float(X[col].min()), float(X[col].max()))
+    cols = st.columns(min(3, len(features)))
+    for i, col in enumerate(features):
+        col_min = float(X[col].min())
+        col_max = float(X[col].max())
+        col_mean = float(X[col].mean())
+        if col_min == col_max:
+            col_max = col_min + 1.0
+        with cols[i % len(cols)]:
+            val = st.slider(col, col_min, col_max, col_mean,
+                            key=f"pred_{col}")
         user_input.append(val)
 
-    input_scaled = scaler.transform([user_input])
-    prediction = model.predict(input_scaled)[0]
+    if st.button("🔮 Predict"):
+        input_scaled = scaler.transform([user_input])
+        prediction = model.predict(input_scaled)[0]
 
-    st.success(f"Prediction: {prediction}")
+        if task == "classification" and le is not None:
+            prediction_label = le.inverse_transform([int(prediction)])[0]
+        else:
+            prediction_label = prediction
+
+        st.markdown("---")
+        if task == "classification":
+            st.success(f"🎯 Predicted Class: **{prediction_label}**")
+            if hasattr(model, "predict_proba"):
+                proba = model.predict_proba(input_scaled)[0]
+                proba_df = pd.DataFrame({
+                    "Class": le.classes_ if le else list(range(len(proba))),
+                    "Probability": proba
+                })
+                fig = px.bar(proba_df, x="Class", y="Probability",
+                             color="Probability", color_continuous_scale="Reds",
+                             title="Prediction Probabilities")
+                st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.success(f"📈 Predicted Value: **{prediction_label:.4f}**")
+
+
+# import streamlit as st
+# import pandas as pd
+# import numpy as np
+# import plotly.express as px
+
+# from sklearn.model_selection import train_test_split, cross_val_score, KFold
+# from sklearn.preprocessing import StandardScaler
+# from sklearn.ensemble import RandomForestClassifier
+# from sklearn.linear_model import LogisticRegression
+# from sklearn.metrics import accuracy_score
+
+# # ------------------ CONFIG ------------------
+# st.set_page_config(page_title="ML Pipeline Dashboard", layout="wide")
+
+# st.markdown("""
+# <style>
+# .main { background-color: #f5f7f9; }
+# .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0px 2px 10px rgba(0,0,0,0.05); }
+# </style>
+# """, unsafe_allow_html=True)
+
+# # ------------------ LOAD DATA ------------------
+# @st.cache_data
+# def load_default_data():
+#     url = "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv"
+#     return pd.read_csv(url)
+
+# # ------------------ SIDEBAR ------------------
+# st.sidebar.title("🛠️ ML Workspace")
+
+# # 🔥 FILE UPLOAD
+# uploaded_file = st.sidebar.file_uploader("📁 Upload your CSV", type=["csv"])
+
+# if uploaded_file is not None:
+#     df = pd.read_csv(uploaded_file)
+#     st.sidebar.success("Custom dataset loaded ✅")
+# else:
+#     df = load_default_data()
+#     st.sidebar.info("Using Titanic dataset")
+
+# # PAGE NAVIGATION
+# page = st.sidebar.selectbox("Navigate", [
+#     "Dashboard",
+#     "EDA",
+#     "Data Cleaning",
+#     "Feature Selection",
+#     "Model Training",
+#     "Prediction"
+# ])
+
+# # ------------------ DASHBOARD ------------------
+# if page == "Dashboard":
+#     st.title("📊 Dataset Overview")
+
+#     col1, col2, col3, col4 = st.columns(4)
+#     col1.metric("Samples", len(df))
+#     col2.metric("Features", len(df.columns))
+#     col3.metric("Missing Values", df.isnull().sum().sum())
+#     col4.metric("Columns", len(df.columns))
+
+#     st.dataframe(df.head())
+
+# # ------------------ EDA ------------------
+# elif page == "EDA":
+#     st.title("📊 Exploratory Data Analysis")
+
+#     numeric_df = df.select_dtypes(include=np.number)
+
+#     feature = st.selectbox("Select Feature", numeric_df.columns)
+
+#     fig = px.histogram(
+#         numeric_df, x=feature, marginal="box",
+#         color_discrete_sequence=["#FF4B4B"]
+#     )
+#     st.plotly_chart(fig, use_container_width=True)
+
+#     st.subheader("Correlation Matrix")
+
+#     fig = px.imshow(
+#         numeric_df.corr(),
+#         text_auto=True,
+#         color_continuous_scale="Reds"
+#     )
+#     st.plotly_chart(fig, use_container_width=True)
+
+# # ------------------ DATA CLEANING ------------------
+# elif page == "Data Cleaning":
+#     st.title("🧹 Data Cleaning")
+
+#     df_clean = df.copy()
+
+#     st.write("Missing Values Before Cleaning:")
+#     st.write(df_clean.isnull().sum())
+
+#     col1, col2 = st.columns(2)
+
+#     with col1:
+#         missing_option = st.selectbox("Missing Handling", ["None", "Drop", "Mean", "Median"])
+
+#     if missing_option == "Drop":
+#         df_clean = df_clean.dropna()
+#     elif missing_option == "Mean":
+#         df_clean = df_clean.fillna(df_clean.mean(numeric_only=True))
+#     elif missing_option == "Median":
+#         df_clean = df_clean.fillna(df_clean.median(numeric_only=True))
+
+#     with col2:
+#         outlier_option = st.selectbox("Outlier Handling", ["None", "IQR"])
+
+#     numeric_df = df_clean.select_dtypes(include=np.number)
+
+#     if outlier_option == "IQR":
+#         Q1 = numeric_df.quantile(0.25)
+#         Q3 = numeric_df.quantile(0.75)
+#         IQR = Q3 - Q1
+#         mask = ~((numeric_df < (Q1 - 1.5 * IQR)) | (numeric_df > (Q3 + 1.5 * IQR))).any(axis=1)
+#         df_clean = df_clean[mask]
+
+#     df_clean = df_clean.select_dtypes(include=np.number)
+
+#     st.session_state["df_clean"] = df_clean
+
+#     st.subheader("After Cleaning")
+
+#     col3, col4 = st.columns(2)
+#     col3.metric("Original Rows", len(df))
+#     col4.metric("Cleaned Rows", len(df_clean))
+
+#     st.dataframe(df_clean.head())
+
+# # ------------------ FEATURE SELECTION ------------------
+# elif page == "Feature Selection":
+#     st.title("🎯 Feature Selection")
+
+#     df_used = st.session_state.get("df_clean", df.select_dtypes(include=np.number))
+
+#     target = st.selectbox("Select Target Column", df_used.columns)
+
+#     X = df_used.drop(target, axis=1)
+#     y = df_used[target]
+
+#     method = st.selectbox("Method", ["None", "Random Forest", "Correlation"])
+
+#     selected_features = X.columns
+
+#     if method == "Random Forest":
+#         rf = RandomForestClassifier()
+#         rf.fit(X, y)
+#         importance = pd.Series(rf.feature_importances_, index=X.columns)
+
+#         st.bar_chart(importance.sort_values())
+
+#         top_n = st.slider("Top Features", 1, len(X.columns), 5)
+#         selected_features = importance.sort_values(ascending=False).head(top_n).index
+
+#     elif method == "Correlation":
+#         corr = df_used.corr()[target].abs().drop(target)
+#         st.bar_chart(corr)
+
+#         top_n = st.slider("Top Features", 1, len(X.columns), 5)
+#         selected_features = corr.sort_values(ascending=False).head(top_n).index
+
+#     st.write("Selected Features:", list(selected_features))
+#     st.session_state["selected_features"] = list(selected_features)
+#     st.session_state["target"] = target
+
+# # ------------------ MODEL TRAINING ------------------
+# elif page == "Model Training":
+#     st.title("🤖 Model Training")
+
+#     df_used = st.session_state.get("df_clean", df.select_dtypes(include=np.number))
+#     features = st.session_state.get("selected_features", df_used.columns[:-1])
+#     target = st.session_state.get("target", df_used.columns[-1])
+
+#     X = df_used[features]
+#     y = df_used[target]
+
+#     test_size = st.slider("Test Size", 0.1, 0.4, 0.2)
+#     model_type = st.selectbox("Model", ["Logistic Regression", "Random Forest"])
+
+#     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
+
+#     scaler = StandardScaler()
+#     X_train = scaler.fit_transform(X_train)
+#     X_test = scaler.transform(X_test)
+
+#     if st.button("Train Model"):
+#         model = LogisticRegression() if model_type == "Logistic Regression" else RandomForestClassifier()
+
+#         model.fit(X_train, y_train)
+#         y_pred = model.predict(X_test)
+
+#         col1, col2 = st.columns(2)
+#         col1.metric("Accuracy", round(accuracy_score(y_test, y_pred), 4))
+
+#         scores = cross_val_score(model, X, y, cv=KFold(5))
+#         col2.metric("Avg CV Score", round(scores.mean(), 4))
+
+#         st.line_chart(scores)
+
+# # ------------------ PREDICTION ------------------
+# elif page == "Prediction":
+#     st.title("🔮 Prediction")
+
+#     df_used = st.session_state.get("df_clean", df.select_dtypes(include=np.number))
+#     features = st.session_state.get("selected_features", df_used.columns[:-1])
+#     target = st.session_state.get("target", df_used.columns[-1])
+
+#     X = df_used[features]
+#     y = df_used[target]
+
+#     scaler = StandardScaler()
+#     X_scaled = scaler.fit_transform(X)
+
+#     model = RandomForestClassifier()
+#     model.fit(X_scaled, y)
+
+#     user_input = []
+#     for col in features:
+#         val = st.slider(col, float(X[col].min()), float(X[col].max()))
+#         user_input.append(val)
+
+#     input_scaled = scaler.transform([user_input])
+#     prediction = model.predict(input_scaled)[0]
+
+#     st.success(f"Prediction: {prediction}")
 
 # import streamlit as st
 # import pandas as pd
