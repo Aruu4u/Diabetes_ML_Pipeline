@@ -202,10 +202,77 @@ elif page == "Data Cleaning":
             use_container_width=True
         )
 
-    # ── Before-cleaning stats ──
-    st.subheader("Before Cleaning — Current Data Issues")
 
-    col_mv, col_out = st.columns(2)
+
+    
+
+    # # ── Before-cleaning stats ──
+    # st.subheader("Before Cleaning — Current Data Issues")
+
+    # col_mv, col_out = st.columns(2)
+            # ── Before-cleaning stats ──
+    st.subheader("Before Cleaning — Current Data Issues")
+    
+    col_zero, col_mv, col_out = st.columns(3)
+    
+    # ───────── ZERO VALUES ─────────
+    with col_zero:
+        st.markdown("**Invalid Zero Values**")
+        
+        zero_series = pd.Series(zero_counts)
+        zero_series = zero_series[zero_series > 0]
+    
+        if zero_series.empty:
+            st.success("No zero issues")
+        else:
+            st.dataframe(
+                zero_series.rename("Zero Count")
+                           .reset_index()
+                           .rename(columns={"index": "Column"}),
+                use_container_width=True
+            )
+    
+    # ───────── MISSING VALUES ─────────
+    with col_mv:
+        st.markdown("**Missing Values**")
+        missing = df.isnull().sum()
+        missing = missing[missing > 0]
+    
+        if missing.empty:
+            st.success("No missing values")
+        else:
+            st.dataframe(
+                missing.rename("Missing Count")
+                       .reset_index()
+                       .rename(columns={"index": "Column"}),
+                use_container_width=True
+            )
+    
+    # ───────── OUTLIERS ─────────
+    with col_out:
+        st.markdown("**Outliers (IQR)**")
+        if numeric_df_raw.empty:
+            st.info("No numeric columns")
+        else:
+            outlier_counts = get_per_col_outliers(numeric_df_raw)
+            outlier_counts = outlier_counts[outlier_counts > 0]
+    
+            if outlier_counts.empty:
+                st.success("No outliers")
+            else:
+                st.dataframe(
+                    outlier_counts.rename("Outlier Count")
+                                  .reset_index()
+                                  .rename(columns={"index": "Column"}),
+                    use_container_width=True
+                )
+    
+
+
+
+
+
+
 
     with col_mv:
         st.markdown("**Missing Values per Column**")
