@@ -174,9 +174,9 @@ elif page == "Data Cleaning":
     # ── ZERO VALUE DETECTION ──
     st.subheader("⚠️ Biologically Invalid Zero Values Detection")
 
-    # zero_counts = {}
-    # for col in numeric_df_raw.columns:
-    #     zero_counts[col] = int((numeric_df_raw[col] == 0).sum())
+    zero_counts = {}
+    for col in numeric_df_raw.columns:
+        zero_counts[col] = int((numeric_df_raw[col] == 0).sum())
     suggested_invalid_cols = []
 
     for col in numeric_df_raw.columns:
