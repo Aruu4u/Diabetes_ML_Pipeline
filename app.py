@@ -140,184 +140,6 @@ elif page == "EDA":
     st.plotly_chart(fig2, use_container_width=True)
 
 
-# # ═══════════════════════════ DATA CLEANING ═══════════════════════════
-# elif page == "Data Cleaning":
-#     st.title("🧹 Data Cleaning")
-
-#     info_box(
-#         "Before training any model, we need clean data. "
-#         "This step handles missing values, outliers, and invalid zero values (like 0 glucose, 0 BMI)."
-#     )
-
-#     numeric_df_raw = df.select_dtypes(include=np.number)
-
-
-
-#         # ───── HARD CODED INVALID ZERO RULES ─────
-#     invalid_zero_columns = []
-
-#     cols = list(df.columns)
-
-#     # Diabetes dataset
-#     if "Glucose" in cols and "BMI" in cols:
-#         invalid_zero_columns = ["Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI"]
-
-#     # Titanic dataset
-#     elif "Survived" in cols and "Pclass" in cols:
-#         invalid_zero_columns = ["Age"]
-
-#     # Housing dataset
-#     elif "RM" in cols and "LSTAT" in cols:
-#         invalid_zero_columns = ["RM"]
-    
-
-#     # ── ZERO VALUE DETECTION ──
-#     st.subheader("⚠️ Biologically Invalid Zero Values Detection")
-
-#     # zero_counts = {}
-#     # for col in numeric_df_raw.columns:
-#     #     zero_counts[col] = int((numeric_df_raw[col] == 0).sum())
-#     suggested_invalid_cols = []
-
-#     for col in numeric_df_raw.columns:
-#         zero_count = int((numeric_df_raw[col] == 0).sum())
-#         zero_counts[col] = zero_count
-
-#     # Hardcoded priority
-#         if col in invalid_zero_columns:
-#             suggested_invalid_cols.append(col)
-
-
-    
-#     zero_series = pd.Series(zero_counts)
-#     zero_series = zero_series[zero_series > 0]
-
-#     if zero_series.empty:
-#         st.success("No suspicious zero values found!")
-#     else:
-#         st.dataframe(
-#             zero_series.rename("Zero Count")
-#                        .reset_index()
-#                        .rename(columns={"index": "Column"}),
-#             use_container_width=True
-#         )
-
-#     # ── Before-cleaning stats ──
-#     st.subheader("Before Cleaning — Current Data Issues")
-
-#     col_mv, col_out = st.columns(2)
-
-#     with col_mv:
-#         st.markdown("**Missing Values per Column**")
-#         missing = df.isnull().sum()
-#         missing = missing[missing > 0]
-#         if missing.empty:
-#             st.success("No missing values found!")
-#         else:
-#             st.dataframe(
-#                 missing.rename("Missing Count")
-#                        .reset_index()
-#                        .rename(columns={"index": "Column"}),
-#                 use_container_width=True
-#             )
-
-#     with col_out:
-#         st.markdown("**Outliers per Numeric Column (IQR)**")
-#         if numeric_df_raw.empty:
-#             st.info("No numeric columns.")
-#         else:
-#             outlier_counts = get_per_col_outliers(numeric_df_raw)
-#             outlier_counts = outlier_counts[outlier_counts > 0]
-#             if outlier_counts.empty:
-#                 st.success("No outliers detected!")
-#             else:
-#                 st.dataframe(
-#                     outlier_counts.rename("Outlier Count")
-#                                   .reset_index()
-#                                   .rename(columns={"index": "Column"}),
-#                     use_container_width=True
-#                 )
-
-#     st.markdown("---")
-#     st.subheader("Cleaning Options")
-
-#     col1, col2, col3 = st.columns(3)
-
-#     with col1:
-#         missing_option = st.selectbox(
-#             "Missing Value Strategy",
-#             ["None", "Drop Rows", "Mean", "Median"]
-#         )
-
-#     with col2:
-#         outlier_option = st.selectbox(
-#             "Outlier Handling",
-#             ["None", "Remove IQR"]
-#         )
-
-#     with col3:
-#         zero_option = st.selectbox(
-#             "Zero Handling",
-#             ["None", "Convert Zero → NaN (then fill)"]
-#         )
-#     st.markdown("### 🔧 Select columns where 0 is invalid")
-
-#     selected_zero_cols = st.multiselect(
-#         "Columns",
-#         numeric_df_raw.columns,
-#         default=suggested_invalid_cols
-#     )
-
-#     # ── APPLY CLEANING ──
-#     if st.button("✅ Apply Cleaning"):
-#         df_clean = df.copy()
-
-#         # # -------- ZERO HANDLING --------
-#         # if zero_option == "Convert Zero → NaN (then fill)":
-#         #     for col in df_clean.select_dtypes(include=np.number).columns:
-#         #         df_clean[col] = df_clean[col].replace(0, np.nan)
-#         if zero_option == "Convert Zero → NaN (then fill)":
-#             for col in selected_zero_cols:
-#                 df_clean[col] = df_clean[col].replace(0, np.nan)
-
-#         # -------- MISSING VALUES --------
-#         if missing_option == "Drop Rows":
-#             df_clean = df_clean.dropna()
-
-#         elif missing_option == "Mean":
-#             num_cols = df_clean.select_dtypes(include=np.number).columns
-#             df_clean[num_cols] = df_clean[num_cols].fillna(df_clean[num_cols].mean())
-
-#         elif missing_option == "Median":
-#             num_cols = df_clean.select_dtypes(include=np.number).columns
-#             df_clean[num_cols] = df_clean[num_cols].fillna(df_clean[num_cols].median())
-
-#         # -------- OUTLIER HANDLING --------
-#         if outlier_option == "Remove IQR":
-#             numeric_part = df_clean.select_dtypes(include=np.number)
-#             Q1 = numeric_part.quantile(0.25)
-#             Q3 = numeric_part.quantile(0.75)
-#             IQR = Q3 - Q1
-#             mask = ~((numeric_part < (Q1 - 1.5 * IQR)) | (numeric_part > (Q3 + 1.5 * IQR))).any(axis=1)
-#             df_clean = df_clean[mask]
-
-#         # -------- FINAL CLEAN DATA --------
-#         df_clean_num = df_clean.select_dtypes(include=np.number)
-#         st.session_state["df_clean"] = df_clean_num
-
-#         # ── AFTER CLEANING ──
-#         st.subheader("After Cleaning")
-
-#         c1, c2, c3, c4 = st.columns(4)
-#         c1.metric("Original Rows", len(df))
-#         c2.metric("Cleaned Rows", len(df_clean_num))
-#         c3.metric("Remaining Missing", int(df_clean_num.isnull().sum().sum()))
-#         c4.metric("Features", len(df_clean_num.columns))
-
-#         st.dataframe(df_clean_num.head(), use_container_width=True)
-
-#         st.success("✅ Data cleaned successfully!")
-
 # ═══════════════════════════ DATA CLEANING ═══════════════════════════
 elif page == "Data Cleaning":
     st.title("🧹 Data Cleaning")
@@ -329,13 +151,44 @@ elif page == "Data Cleaning":
 
     numeric_df_raw = df.select_dtypes(include=np.number)
 
+
+
+        # ───── HARD CODED INVALID ZERO RULES ─────
+    invalid_zero_columns = []
+
+    cols = list(df.columns)
+
+    # Diabetes dataset
+    if "Glucose" in cols and "BMI" in cols:
+        invalid_zero_columns = ["Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI"]
+
+    # Titanic dataset
+    elif "Survived" in cols and "Pclass" in cols:
+        invalid_zero_columns = ["Age"]
+
+    # Housing dataset
+    elif "RM" in cols and "LSTAT" in cols:
+        invalid_zero_columns = ["RM"]
+    
+
     # ── ZERO VALUE DETECTION ──
     st.subheader("⚠️ Biologically Invalid Zero Values Detection")
 
-    zero_counts = {}
-    for col in numeric_df_raw.columns:
-        zero_counts[col] = int((numeric_df_raw[col] == 0).sum())
+    # zero_counts = {}
+    # for col in numeric_df_raw.columns:
+    #     zero_counts[col] = int((numeric_df_raw[col] == 0).sum())
+    suggested_invalid_cols = []
 
+    for col in numeric_df_raw.columns:
+        zero_count = int((numeric_df_raw[col] == 0).sum())
+        zero_counts[col] = zero_count
+
+    # Hardcoded priority
+        if col in invalid_zero_columns:
+            suggested_invalid_cols.append(col)
+
+
+    
     zero_series = pd.Series(zero_counts)
     zero_series = zero_series[zero_series > 0]
 
@@ -407,14 +260,24 @@ elif page == "Data Cleaning":
             "Zero Handling",
             ["None", "Convert Zero → NaN (then fill)"]
         )
+    st.markdown("### 🔧 Select columns where 0 is invalid")
+
+    selected_zero_cols = st.multiselect(
+        "Columns",
+        numeric_df_raw.columns,
+        default=suggested_invalid_cols
+    )
 
     # ── APPLY CLEANING ──
     if st.button("✅ Apply Cleaning"):
         df_clean = df.copy()
 
-        # -------- ZERO HANDLING --------
+        # # -------- ZERO HANDLING --------
+        # if zero_option == "Convert Zero → NaN (then fill)":
+        #     for col in df_clean.select_dtypes(include=np.number).columns:
+        #         df_clean[col] = df_clean[col].replace(0, np.nan)
         if zero_option == "Convert Zero → NaN (then fill)":
-            for col in df_clean.select_dtypes(include=np.number).columns:
+            for col in selected_zero_cols:
                 df_clean[col] = df_clean[col].replace(0, np.nan)
 
         # -------- MISSING VALUES --------
@@ -454,6 +317,7 @@ elif page == "Data Cleaning":
         st.dataframe(df_clean_num.head(), use_container_width=True)
 
         st.success("✅ Data cleaned successfully!")
+
 
 
 # ═══════════════════════════ FEATURE SELECTION ═══════════════════════════
