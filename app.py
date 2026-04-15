@@ -735,7 +735,8 @@ elif page == "Feature Selection":
             )
     
             selected_features = mi_series[mi_series > threshold].index.tolist()
-    
+            selected_features = [col for col in selected_features if col != target]
+                
             st.success(f"Selected {len(selected_features)} features")
     
         except Exception as e:
@@ -745,7 +746,7 @@ elif page == "Feature Selection":
     st.markdown("---")
     st.success(f"✅ Final Selected Features ({len(selected_features)}): {selected_features}")
     
-    st.session_state["selected_features"] = selected_features
+    st.session_state["features"] = selected_features
     st.session_state["target"] = target
     st.session_state["task"] = task
 
