@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-
+from sklearn.cluster import DBSCAN, OPTICS
+from sklearn.ensemble import IsolationForest
 from sklearn.model_selection import train_test_split, StratifiedKFold, KFold, cross_validate
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
