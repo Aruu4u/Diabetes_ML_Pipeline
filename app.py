@@ -919,7 +919,7 @@ elif page == "Model Training":
                     
                     # ───── SMART RECOMMENDATIONS ─────
                     if train_acc - acc > 0.1:
-                        st.error("🔴 Overfitting detected! Model memorizing training data.")
+                        st.markdown("Overfitting detected! Model memorizing training data.")
                     
                         st.markdown("### 💡 Recommendations:")
                         st.write("• Increase **Test Size** (more unseen data)")
@@ -929,7 +929,7 @@ elif page == "Model Training":
                         st.write("• Try **more data** if possible")
                     
                     elif train_acc < 0.6 and acc < 0.6:
-                        st.warning("🟡 Underfitting detected! Model too simple.")
+                        st.markdown("Underfitting detected! Model too simple.")
                     
                         st.markdown("### 💡 Recommendations:")
                         st.write("• Use a **more powerful model** (Random Forest / SVM)")
@@ -999,7 +999,7 @@ elif page == "Model Training":
                     
                     # ───── SMART RECOMMENDATIONS ─────
                     if train_r2 - r2 > 0.2:
-                        st.markdown("🔴 Overfitting detected!")
+                        st.markdown("Overfitting detected!")
                     
                         st.markdown("### 💡 Recommendations:")
                         st.write("• Increase **Test Size**")
@@ -1009,7 +1009,7 @@ elif page == "Model Training":
                         st.write("• Collect more data")
                     
                     elif train_r2 < 0.5 and r2 < 0.5:
-                        st.markdown("🟡 Underfitting detected!")
+                        st.markdown("Underfitting detected!")
                     
                         st.markdown("### 💡 Recommendations:")
                         st.write("• Use advanced model (Random Forest / SVR)")
