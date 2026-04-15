@@ -918,31 +918,31 @@ elif page == "Model Training":
                     st.write(f"Generalization Gap: {gap:.4f}")
                     
                     # ───── SMART RECOMMENDATIONS ─────
-                    if train_acc - acc > 0.1:
-                        st.markdown("Overfitting detected! Model memorizing training data.")
+                    # if train_acc - acc > 0.1:
+                    #     st.markdown("Overfitting detected! Model memorizing training data.")
                     
-                        st.markdown("### 💡 Recommendations:")
-                        st.write("• Increase **Test Size** (more unseen data)")
-                        st.write("• Use a **simpler model** (try Logistic Regression)")
-                        st.write("• Reduce number of features")
-                        st.write("• Apply stronger **regularization**")
-                        st.write("• Try **more data** if possible")
+                    #     st.markdown("### 💡 Recommendations:")
+                    #     st.write("• Increase **Test Size** (more unseen data)")
+                    #     st.write("• Use a **simpler model** (try Logistic Regression)")
+                    #     st.write("• Reduce number of features")
+                    #     st.write("• Apply stronger **regularization**")
+                    #     st.write("• Try **more data** if possible")
                     
-                    elif train_acc < 0.6 and acc < 0.6:
-                        st.markdown("Underfitting detected! Model too simple.")
+                    # elif train_acc < 0.6 and acc < 0.6:
+                    #     st.markdown("Underfitting detected! Model too simple.")
                     
-                        st.markdown("### 💡 Recommendations:")
-                        st.write("• Use a **more powerful model** (Random Forest / SVM)")
-                        st.write("• Add more relevant features")
-                        st.write("• Reduce excessive data cleaning")
-                        st.write("• Train for more iterations")
-                        st.write("• Try decreasing Test Size slightly")
+                    #     st.markdown("### 💡 Recommendations:")
+                    #     st.write("• Use a **more powerful model** (Random Forest / SVM)")
+                    #     st.write("• Add more relevant features")
+                    #     st.write("• Reduce excessive data cleaning")
+                    #     st.write("• Train for more iterations")
+                    #     st.write("• Try decreasing Test Size slightly")
                     
-                    else:
-                        st.success("🟢 Model is well balanced!")
+                    # else:
+                    #     st.success("🟢 Model is well balanced!")
                     
-                        st.markdown("### 💡 Suggestions:")
-                        st.write("• Model is performing well ✅")
+                    #     st.markdown("### 💡 Suggestions:")
+                    #     st.write("• Model is performing well ✅")
 
             
                     # ── CONFUSION MATRIX ──
@@ -998,28 +998,28 @@ elif page == "Model Training":
                     st.write(f"Generalization Gap: {gap:.4f}")
                     
                     # ───── SMART RECOMMENDATIONS ─────
-                    if train_r2 - r2 > 0.2:
-                        st.markdown("Overfitting detected!")
+                    # if train_r2 - r2 > 0.2:
+                    #     st.markdown("Overfitting detected!")
                     
-                        st.markdown("### 💡 Recommendations:")
-                        st.write("• Increase **Test Size**")
-                        st.write("• Use simpler model (Linear Regression)")
-                        st.write("• Reduce number of features")
-                        st.write("• Apply feature selection")
-                        st.write("• Collect more data")
+                    #     st.markdown("### 💡 Recommendations:")
+                    #     st.write("• Increase **Test Size**")
+                    #     st.write("• Use simpler model (Linear Regression)")
+                    #     st.write("• Reduce number of features")
+                    #     st.write("• Apply feature selection")
+                    #     st.write("• Collect more data")
                     
-                    elif train_r2 < 0.5 and r2 < 0.5:
-                        st.markdown("Underfitting detected!")
+                    # elif train_r2 < 0.5 and r2 < 0.5:
+                    #     st.markdown("Underfitting detected!")
                     
-                        st.markdown("### 💡 Recommendations:")
-                        st.write("• Use advanced model (Random Forest / SVR)")
-                        st.write("• Add more features")
-                        st.write("• Reduce aggressive outlier removal")
-                        st.write("• Try feature engineering")
-                        st.write("• Decrease Test Size slightly")
+                    #     st.markdown("### 💡 Recommendations:")
+                    #     st.write("• Use advanced model (Random Forest / SVR)")
+                    #     st.write("• Add more features")
+                    #     st.write("• Reduce aggressive outlier removal")
+                    #     st.write("• Try feature engineering")
+                    #     st.write("• Decrease Test Size slightly")
                     
-                    else:
-                        st.success("🟢 Model is well balanced!")
+                    # else:
+                    #     st.success("🟢 Model is well balanced!")
 
             
                 st.success("✅ Training complete!")
