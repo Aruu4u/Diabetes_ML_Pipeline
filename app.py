@@ -830,7 +830,11 @@ elif page == "Model Training":
             scaler = StandardScaler()
             X_train_s = scaler.fit_transform(X_train)
             X_test_s  = scaler.transform(X_test)
-            X_all_s   = scaler.fit_transform(X)
+            # X_all_s   = scaler.fit_transform(X)
+            scaler = StandardScaler()
+
+            X_train_s = scaler.fit_transform(X_train)
+            X_test_s = scaler.transform(X_test)
 
             # if task == "classification":
             #     model = (LogisticRegression(max_iter=1000)
@@ -1058,8 +1062,9 @@ elif page == "Prediction":
                 st.stop()
 
             # Create input dataframe
-            features = st.session_state.get("selected_features")
-
+            features = st.session_state.get("features")
+            # df_used = st.session_state.get("df_clean")
+            
             input_dict = {
                 "Pregnancies": pregnancies,
                 "Glucose": glucose,
@@ -1071,11 +1076,21 @@ elif page == "Prediction":
                 "Age": age
             }
             
-            input_data = pd.DataFrame([[input_dict.get(col, 0) for col in features]], columns=features)
-
+            input_data = pd.DataFrame(columns=features)
+            
+            for col in features:
+                input_data[col] = [input_dict.get(col, 0)]
             # Scale input
+            # if scaler is not None:
+            #     input_scaled = scaler.transform(input_data)
+            # else:
+            #     input_scaled = input_data
             if scaler is not None:
-                input_scaled = scaler.transform(input_data)
+                try:
+                    input_scaled = scaler.transform(input_data)
+                except Exception as e:
+                    st.error(f"Scaling error: {e}")
+                    st.stop()
             else:
                 input_scaled = input_data
 
