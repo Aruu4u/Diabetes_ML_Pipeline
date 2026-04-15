@@ -1020,10 +1020,7 @@ elif page == "Model Training":
                     
                     else:
                         st.success("🟢 Model is well balanced!")
-                    
-                        st.markdown("### 💡 Suggestions:")
-                        st.write("• Try hyperparameter tuning")
-                        st.write("• Experiment with different models")
+
             
                 st.success("✅ Training complete!")
             
