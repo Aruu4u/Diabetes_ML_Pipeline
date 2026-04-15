@@ -96,7 +96,7 @@ st.sidebar.title("🛠️ ML Workspace")
 # 🎯 STEP 1: Problem Type
 problem_type = st.sidebar.radio(
     "🎯 Select Problem Type",
-    ["Auto Detect", "Classification", "Regression"]
+    ["Classification", "Regression"]
 )
 
 # 📂 STEP 2: Data Source
@@ -109,14 +109,14 @@ data_source = st.sidebar.radio(
 if data_source == "Use Sample Dataset":
     sample_option = st.sidebar.selectbox(
         "Choose Dataset",
-        ["Diabetes", "Titanic", "Housing"]
+        ["Titanic", "Housing"]
     )
 
-    if sample_option == "Diabetes":
-        df = pd.read_csv("https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.data.csv")
-        df.columns = ["Pregnancies","Glucose","BloodPressure","SkinThickness","Insulin","BMI","DPF","Age","Outcome"]
+    # if sample_option == "Diabetes":
+    #     df = pd.read_csv("https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.data.csv")
+    #     df.columns = ["Pregnancies","Glucose","BloodPressure","SkinThickness","Insulin","BMI","DPF","Age","Outcome"]
 
-    elif sample_option == "Titanic":
+    if sample_option == "Titanic":
         df = pd.read_csv("https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv")
 
     elif sample_option == "Housing":
