@@ -207,10 +207,15 @@ if page == "Dashboard":
             st.warning("Select at least 2 features")
         else:
             X = numeric_df[selected_features]
-        
+            
+            X = X.replace([np.inf, -np.inf], np.nan)
+            X = X.fillna(0)
             # Scaling
             scaler = StandardScaler()
             X_scaled = scaler.fit_transform(X)
+            if X_scaled.shape[1] < 2:
+                st.warning("Need at least 2 valid features for PCA")
+                st.stop()
             
             X_scaled = np.nan_to_num(X_scaled)
         
