@@ -999,7 +999,7 @@ elif page == "Model Training":
                     
                     # ───── SMART RECOMMENDATIONS ─────
                     if train_r2 - r2 > 0.2:
-                        st.error("🔴 Overfitting detected!")
+                        st.markdown("🔴 Overfitting detected!")
                     
                         st.markdown("### 💡 Recommendations:")
                         st.write("• Increase **Test Size**")
@@ -1009,7 +1009,7 @@ elif page == "Model Training":
                         st.write("• Collect more data")
                     
                     elif train_r2 < 0.5 and r2 < 0.5:
-                        st.warning("🟡 Underfitting detected!")
+                        st.markdown("🟡 Underfitting detected!")
                     
                         st.markdown("### 💡 Recommendations:")
                         st.write("• Use advanced model (Random Forest / SVR)")
