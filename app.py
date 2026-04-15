@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+from sklearn.svm import SVC, SVR
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.feature_selection import VarianceThreshold, mutual_info_classif, mutual_info_regression
 from sklearn.cluster import DBSCAN, OPTICS
 from sklearn.ensemble import IsolationForest
