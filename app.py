@@ -106,6 +106,76 @@ if page == "Dashboard":
 
     st.subheader("Summary Statistics")
     st.dataframe(df.describe().round(3), use_container_width=True)
+    # ═══════════════════════════ PCA VISUALIZATION ═══════════════════════════
+    st.markdown("---")
+    st.subheader("🧠 PCA Visualization (Data Shape)")
+    
+    from sklearn.decomposition import PCA
+    from sklearn.preprocessing import StandardScaler
+    
+    numeric_df = df.select_dtypes(include=np.number)
+    
+    if numeric_df.shape[1] < 2:
+        st.warning("Need at least 2 numeric columns for PCA")
+    else:
+        # 🎯 Target selection
+        target_col = st.selectbox("🎯 Select Target Column (optional)", ["None"] + list(numeric_df.columns))
+        
+        # 🎛 Feature selection
+        st.markdown("### 🔧 Select Features for PCA")
+        selected_features = st.multiselect(
+            "Choose features",
+            numeric_df.columns,
+            default=numeric_df.columns.tolist()
+        )
+        
+        if len(selected_features) < 2:
+            st.warning("Select at least 2 features")
+        else:
+            X = numeric_df[selected_features]
+        
+            # Scaling
+            scaler = StandardScaler()
+            X_scaled = scaler.fit_transform(X)
+        
+            # PCA
+            pca = PCA(n_components=2)
+            X_pca = pca.fit_transform(X_scaled)
+        
+            pca_df = pd.DataFrame(X_pca, columns=["PC1", "PC2"])
+        
+            # If target selected → color plot
+            if target_col != "None":
+                pca_df["Target"] = df[target_col]
+        
+                fig = px.scatter(
+                    pca_df,
+                    x="PC1",
+                    y="PC2",
+                    color="Target",
+                    title="PCA - Colored by Target",
+                    color_continuous_scale="Viridis"
+                )
+            else:
+                fig = px.scatter(
+                    pca_df,
+                    x="PC1",
+                    y="PC2",
+                    title="PCA Projection"
+                )
+        
+            st.plotly_chart(fig, use_container_width=True)
+        
+            # 📊 Explained variance
+            var1 = pca.explained_variance_ratio_[0]
+            var2 = pca.explained_variance_ratio_[1]
+        
+            st.info(f"PC1 explains {var1:.2%} variance, PC2 explains {var2:.2%}")
+        
+            # 📌 Shape insight
+            st.markdown("### 📐 Data Shape Insight")
+            st.write(f"Original Shape: {df.shape}")
+            st.write(f"Selected Feature Shape: {X.shape}")
 
 
 # ═══════════════════════════ EDA ═══════════════════════════
