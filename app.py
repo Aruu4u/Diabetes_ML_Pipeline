@@ -211,6 +211,8 @@ if page == "Dashboard":
             # Scaling
             scaler = StandardScaler()
             X_scaled = scaler.fit_transform(X)
+            
+            X_scaled = np.nan_to_num(X_scaled)
         
             # PCA
             pca = PCA(n_components=2)
