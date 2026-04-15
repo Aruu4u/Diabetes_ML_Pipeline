@@ -830,7 +830,7 @@ elif page == "Model Training":
             scaler = StandardScaler()
             X_train_s = scaler.fit_transform(X_train)
             X_test_s  = scaler.transform(X_test)
-            # X_all_s   = scaler.fit_transform(X)
+            X_all_s   = scaler.fit_transform(X)
             scaler = StandardScaler()
 
             X_train_s = scaler.fit_transform(X_train)
