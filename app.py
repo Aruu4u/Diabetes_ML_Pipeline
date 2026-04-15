@@ -488,15 +488,15 @@ elif page == "Data Cleaning":
     with col1:
         missing_option = st.selectbox(
             "Missing Value Strategy",
-            ["None", "Drop Rows", "Mean", "Median"]
+            ["None", "Drop Rows", "Mean", "Median", "Mode"]
         )
-
+    
     with col2:
         outlier_option = st.selectbox(
             "Outlier Handling",
-            ["None", "Remove IQR"]
+            ["None", "IQR", "Isolation Forest", "DBSCAN", "OPTICS"]
         )
-
+    
     with col3:
         zero_option = st.selectbox(
             "Zero Handling",
@@ -533,16 +533,52 @@ elif page == "Data Cleaning":
         elif missing_option == "Median":
             num_cols = df_clean.select_dtypes(include=np.number).columns
             df_clean[num_cols] = df_clean[num_cols].fillna(df_clean[num_cols].median())
+       
+        elif missing_option == "Mode":
+            for col in df_clean.columns:
+                df_clean[col].fillna(df_clean[col].mode()[0], inplace=True)
 
         # -------- OUTLIER HANDLING --------
-        if outlier_option == "Remove IQR":
+        if outlier_option == "IQR":
             numeric_part = df_clean.select_dtypes(include=np.number)
             Q1 = numeric_part.quantile(0.25)
             Q3 = numeric_part.quantile(0.75)
             IQR = Q3 - Q1
-            mask = ~((numeric_part < (Q1 - 1.5 * IQR)) | (numeric_part > (Q3 + 1.5 * IQR))).any(axis=1)
+        
+            mask = ~((numeric_part < (Q1 - 1.5 * IQR)) | 
+                     (numeric_part > (Q3 + 1.5 * IQR))).any(axis=1)
+        
             df_clean = df_clean[mask]
-
+        
+        
+        elif outlier_option == "Isolation Forest":
+            numeric_part = df_clean.select_dtypes(include=np.number).fillna(0)
+        
+            iso = IsolationForest(contamination=0.05, random_state=42)
+            preds = iso.fit_predict(numeric_part)
+        
+            # keep only normal points (1)
+            df_clean = df_clean[preds == 1]
+        
+        
+        elif outlier_option == "DBSCAN":
+            numeric_part = df_clean.select_dtypes(include=np.number).fillna(0)
+        
+            db = DBSCAN(eps=0.5, min_samples=5)
+            labels = db.fit_predict(numeric_part)
+        
+            # DBSCAN: -1 = outlier
+            df_clean = df_clean[labels != -1]
+        
+        
+        elif outlier_option == "OPTICS":
+            numeric_part = df_clean.select_dtypes(include=np.number).fillna(0)
+        
+            optics = OPTICS(min_samples=5)
+            labels = optics.fit_predict(numeric_part)
+        
+            # OPTICS: -1 = outlier
+            df_clean = df_clean[labels != -1]
         # -------- FINAL CLEAN DATA --------
         df_clean_num = df_clean.select_dtypes(include=np.number)
         st.session_state["df_clean"] = df_clean_num
