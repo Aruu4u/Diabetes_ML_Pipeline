@@ -162,8 +162,8 @@ page = st.sidebar.selectbox("Navigate", [
     "EDA",
     "Data Cleaning",
     "Feature Selection",
-    "Model Training",
-    "Prediction"
+    "Model Training"
+    
 ])
 # ═══════════════════════════ DASHBOARD ═══════════════════════════
 if page == "Dashboard":
@@ -1039,80 +1039,80 @@ elif page == "Model Training":
             except Exception as e:
                 st.error(f"Training failed: {e}")
 
-# ═══════════════════════════ PREDICTION ═══════════════════════════
-elif page == "Prediction":
-    st.title("🧪 Diabetes Prediction")
+# # ═══════════════════════════ PREDICTION ═══════════════════════════
+# elif page == "Prediction":
+#     st.title("🧪 Diabetes Prediction")
 
-    st.markdown("Enter patient details to predict whether diabetes is present or not.")
+#     st.markdown("Enter patient details to predict whether diabetes is present or not.")
 
-    # 🎯 Input Fields
-    pregnancies = st.number_input("Pregnancies", min_value=0, max_value=20, value=1)
-    glucose = st.number_input("Glucose", min_value=0, max_value=200, value=100)
-    bp = st.number_input("Blood Pressure", min_value=0, max_value=150, value=70)
-    skin = st.number_input("Skin Thickness", min_value=0, max_value=100, value=20)
-    insulin = st.number_input("Insulin", min_value=0, max_value=900, value=80)
-    bmi = st.number_input("BMI", min_value=0.0, max_value=70.0, value=25.0)
-    dpf = st.number_input("Diabetes Pedigree Function", min_value=0.0, max_value=3.0, value=0.5)
-    age = st.number_input("Age", min_value=1, max_value=120, value=30)
+#     # 🎯 Input Fields
+#     pregnancies = st.number_input("Pregnancies", min_value=0, max_value=20, value=1)
+#     glucose = st.number_input("Glucose", min_value=0, max_value=200, value=100)
+#     bp = st.number_input("Blood Pressure", min_value=0, max_value=150, value=70)
+#     skin = st.number_input("Skin Thickness", min_value=0, max_value=100, value=20)
+#     insulin = st.number_input("Insulin", min_value=0, max_value=900, value=80)
+#     bmi = st.number_input("BMI", min_value=0.0, max_value=70.0, value=25.0)
+#     dpf = st.number_input("Diabetes Pedigree Function", min_value=0.0, max_value=3.0, value=0.5)
+#     age = st.number_input("Age", min_value=1, max_value=120, value=30)
 
-    if st.button("🔍 Predict Diabetes"):
+#     if st.button("🔍 Predict Diabetes"):
 
-        try:
-            # Load trained model from session
-            model = st.session_state.get("trained_model")
-            scaler = st.session_state.get("scaler")
+#         try:
+#             # Load trained model from session
+#             model = st.session_state.get("trained_model")
+#             scaler = st.session_state.get("scaler")
 
-            if model is None:
-                st.error("❌ Train the model first in Model Training page")
-                st.stop()
+#             if model is None:
+#                 st.error("❌ Train the model first in Model Training page")
+#                 st.stop()
 
-            # Create input dataframe
-            features = st.session_state.get("selected_features")
+#             # Create input dataframe
+#             features = st.session_state.get("selected_features")
                         
-            if not features:
-                st.error("❌ Features not found. Please complete Feature Selection + Training first.")
-                st.stop()
-            # df_used = st.session_state.get("df_clean")
+#             if not features:
+#                 st.error("❌ Features not found. Please complete Feature Selection + Training first.")
+#                 st.stop()
+#             # df_used = st.session_state.get("df_clean")
             
-            input_dict = {
-                "Pregnancies": pregnancies,
-                "Glucose": glucose,
-                "BloodPressure": bp,
-                "SkinThickness": skin,
-                "Insulin": insulin,
-                "BMI": bmi,
-                "DiabetesPedigreeFunction": dpf,
-                "Age": age
-            }
+#             input_dict = {
+#                 "Pregnancies": pregnancies,
+#                 "Glucose": glucose,
+#                 "BloodPressure": bp,
+#                 "SkinThickness": skin,
+#                 "Insulin": insulin,
+#                 "BMI": bmi,
+#                 "DiabetesPedigreeFunction": dpf,
+#                 "Age": age
+#             }
             
-            input_data = pd.DataFrame([{col: input_dict.get(col, 0) for col in features}])
-            # Scale input
-            # if scaler is not None:
-            #     input_scaled = scaler.transform(input_data)
-            # else:
-            #     input_scaled = input_data
-            if scaler is not None:
-                try:
-                    input_scaled = scaler.transform(input_data)
-                except Exception as e:
-                    st.error(f"Scaling error: {e}")
-                    st.stop()
-            else:
-                input_scaled = input_data
+#             input_data = pd.DataFrame([{col: input_dict.get(col, 0) for col in features}])
+#             # Scale input
+#             # if scaler is not None:
+#             #     input_scaled = scaler.transform(input_data)
+#             # else:
+#             #     input_scaled = input_data
+#             if scaler is not None:
+#                 try:
+#                     input_scaled = scaler.transform(input_data)
+#                 except Exception as e:
+#                     st.error(f"Scaling error: {e}")
+#                     st.stop()
+#             else:
+#                 input_scaled = input_data
 
-            # Prediction
-            prediction = model.predict(input_scaled)[0]
-            if hasattr(model, "predict_proba"):
-                proba = model.predict_proba(input_scaled)[0][1]
-                st.info(f"Diabetes Probability: {proba:.2f}")
+#             # Prediction
+#             prediction = model.predict(input_scaled)[0]
+#             if hasattr(model, "predict_proba"):
+#                 proba = model.predict_proba(input_scaled)[0][1]
+#                 st.info(f"Diabetes Probability: {proba:.2f}")
 
-            # Output
-            if prediction == 1:
-                st.error("⚠️ High Risk: Patient is likely Diabetic")
-                st.write("👉 Recommendation: Please consult a doctor and monitor glucose levels.")
-            else:
-                st.success("✅ Low Risk: Patient is NOT Diabetic")
-                st.write("👉 Maintain a healthy lifestyle 👍")
+#             # Output
+#             if prediction == 1:
+#                 st.error("⚠️ High Risk: Patient is likely Diabetic")
+#                 st.write("👉 Recommendation: Please consult a doctor and monitor glucose levels.")
+#             else:
+#                 st.success("✅ Low Risk: Patient is NOT Diabetic")
+#                 st.write("👉 Maintain a healthy lifestyle 👍")
 
-        except Exception as e:
-            st.error(f"Prediction failed: {e}")
+#         except Exception as e:
+#             st.error(f"Prediction failed: {e}")
