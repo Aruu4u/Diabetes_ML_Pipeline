@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+from sklearn.feature_selection import VarianceThreshold, mutual_info_classif, mutual_info_regression
 from sklearn.cluster import DBSCAN, OPTICS
 from sklearn.ensemble import IsolationForest
 from sklearn.model_selection import train_test_split, StratifiedKFold, KFold, cross_validate
@@ -639,71 +640,85 @@ elif page == "Feature Selection":
     X = df_used.drop(columns=[target])
     y = df_used[target]
 
+
+
     # Step 2 — Method
-    st.subheader("Step 2 — Choose a Feature Importance Method")
-    info_box(
-        "**None** — All columns are kept as features with no ranking. \n\n"
-        "**Random Forest** — A temporary forest model is trained to score each column by how much "
-        "it reduces prediction error. Columns used at early/many decision splits score higher. "
-        "Best when relationships between features and target are complex or non-linear.\n\n"
-        "**Correlation** — Measures the linear relationship between each feature and the target. "
-        "Simple and fast — best for datasets where relationships are roughly linear."
+    st.subheader("Step 2 — Feature Selection Method")
+    
+    method = st.selectbox(
+        "Select Method",
+        ["None", "Variance Threshold", "Correlation", "Information Gain"]
     )
-    method = st.selectbox("Feature Importance Method", ["None", "Random Forest", "Correlation"])
-
+    
     selected_features = list(X.columns)
-
-    if method == "Random Forest":
-        try:
-            with st.spinner("Computing feature importances..."):
-                if task == "classification":
-                    y_enc, _ = encode_target(y)
-                    rf = RandomForestClassifier(n_estimators=100, random_state=42)
-                    rf.fit(X.fillna(0), y_enc)
-                else:
-                    rf = RandomForestRegressor(n_estimators=100, random_state=42)
-                    rf.fit(X.fillna(0), y)
-
-            importance = pd.Series(rf.feature_importances_, index=X.columns).sort_values(ascending=True)
-            fig = px.bar(importance, orientation="h", color=importance,
-                         color_continuous_scale="Reds",
-                         labels={"value": "Importance Score", "index": "Feature"},
-                         title="Random Forest Feature Importances (higher = more useful)")
-            st.plotly_chart(fig, use_container_width=True)
-
-            st.subheader("Step 3 — How Many Top Features to Keep?")
-            info_box(
-                "From the ranked list above, slide to choose how many of the top-ranked features to keep. "
-                "Using fewer but more relevant features often produces a faster, more accurate model "
-                "by removing columns that add noise rather than signal."
-            )
-            top_n = st.slider("Top N Features to Keep", 1, len(X.columns), min(5, len(X.columns)))
-            selected_features = importance.sort_values(ascending=False).head(top_n).index.tolist()
-
-        except Exception as e:
-            st.error(f"Random Forest feature selection failed: {e}")
-
+    
+    # ───────── VARIANCE THRESHOLD ─────────
+    if method == "Variance Threshold":
+        st.info("Removes features with very low variance (almost constant values)")
+    
+        threshold = st.slider("Variance Threshold", 0.0, 1.0, 0.01)
+    
+        selector = VarianceThreshold(threshold=threshold)
+        selector.fit(X.fillna(0))
+    
+        selected_features = X.columns[selector.get_support()].tolist()
+    
+        st.success(f"Selected {len(selected_features)} features")
+    
+    # ───────── CORRELATION ─────────
     elif method == "Correlation":
-        corr = df_used.corr()[target].abs().drop(target).sort_values(ascending=True)
-        fig = px.bar(corr, orientation="h", color=corr,
-                     color_continuous_scale="Blues",
-                     labels={"value": "Absolute Correlation", "index": "Feature"},
-                     title="Absolute Correlation with Target (higher = more related)")
-        st.plotly_chart(fig, use_container_width=True)
-
-        st.subheader("Step 3 — How Many Top Features to Keep?")
-        info_box(
-            "Keep the N columns most correlated with the target. "
-            "Columns with near-zero correlation contribute very little and can safely be dropped."
+        st.info("Select features based on correlation with target")
+    
+        corr = df_used.corr()[target].abs().drop(target)
+    
+        fig = px.bar(
+            corr.sort_values(),
+            orientation="h",
+            color=corr,
+            color_continuous_scale="Blues",
+            title="Feature Correlation with Target"
         )
-        top_n = st.slider("Top N Features to Keep", 1, len(X.columns), min(5, len(X.columns)))
-        selected_features = corr.sort_values(ascending=False).head(top_n).index.tolist()
-
+        st.plotly_chart(fig, use_container_width=True)
+    
+        threshold = st.slider("Correlation Threshold", 0.0, 1.0, 0.1)
+    
+        selected_features = corr[corr > threshold].index.tolist()
+    
+        st.success(f"Selected {len(selected_features)} features")
+    
+    # ───────── INFORMATION GAIN ─────────
+    elif method == "Information Gain":
+        st.info("Select features based on information gain (mutual information)")
+    
+        if task == "classification":
+            mi = mutual_info_classif(X.fillna(0), y)
+        else:
+            mi = mutual_info_regression(X.fillna(0), y)
+    
+        mi_series = pd.Series(mi, index=X.columns)
+    
+        fig = px.bar(
+            mi_series.sort_values(),
+            orientation="h",
+            color=mi_series,
+            color_continuous_scale="Reds",
+            title="Information Gain (Mutual Information)"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    
+        threshold = st.slider("Information Gain Threshold", 0.0, float(mi_series.max()), 0.01)
+    
+        selected_features = mi_series[mi_series > threshold].index.tolist()
+    
+        st.success(f"Selected {len(selected_features)} features")
+    
     else:
-        st.info("No method selected — all features will be passed to the model.")
-
+        st.info("No feature selection applied")
+    
+    # ───────── FINAL OUTPUT ─────────
     st.markdown("---")
-    st.success(f"✅ Features selected for training ({len(selected_features)}): {selected_features}")
+    st.success(f"✅ Final Selected Features ({len(selected_features)}): {selected_features}")
+    
     st.session_state["selected_features"] = selected_features
     st.session_state["target"] = target
     st.session_state["task"] = task
