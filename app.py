@@ -862,126 +862,128 @@ elif page == "Model Training":
             try:
                 model.fit(X_train_s, y_train)
                 y_pred = model.predict(X_test_s)
-
+            
                 st.markdown("---")
                 st.subheader("📈 Performance Metrics")
-
-                # ── CLASSIFICATION ──
+            
+                # ───────────────── CLASSIFICATION ─────────────────
                 if task == "classification":
                     avg_strategy = "binary" if y.nunique() == 2 else "weighted"
-
+            
                     acc  = accuracy_score(y_test, y_pred)
                     prec = precision_score(y_test, y_pred, average=avg_strategy, zero_division=0)
                     rec  = recall_score(y_test, y_pred, average=avg_strategy, zero_division=0)
                     f1   = f1_score(y_test, y_pred, average=avg_strategy, zero_division=0)
-
+            
+                    # 🔹 TRAIN SCORE (for overfitting check)
+                    train_pred = model.predict(X_train_s)
+                    train_acc = accuracy_score(y_train, train_pred)
+            
+                    # 🔹 CROSS VALIDATION
                     cv = StratifiedKFold(n_splits=k_folds, shuffle=True, random_state=42)
                     cv_res = cross_validate(
                         model, X_all_s, y, cv=cv,
                         scoring=["accuracy", "precision_weighted", "recall_weighted", "f1_weighted"]
                     )
+            
                     avg_acc  = cv_res["test_accuracy"].mean()
                     avg_prec = cv_res["test_precision_weighted"].mean()
                     avg_rec  = cv_res["test_recall_weighted"].mean()
                     avg_f1   = cv_res["test_f1_weighted"].mean()
-
-                    st.markdown("**Test Set Scores** *(single held-out test split)*")
+            
+                    # ── METRICS UI ──
+                    st.markdown("**Test Set Scores**")
                     c1, c2, c3, c4 = st.columns(4)
                     c1.metric("Accuracy",  f"{acc:.4f}")
                     c2.metric("Precision", f"{prec:.4f}")
                     c3.metric("Recall",    f"{rec:.4f}")
                     c4.metric("F1 Score",  f"{f1:.4f}")
-
-                    info_box(
-                        "<b>Accuracy</b> = % of all predictions that are correct. &nbsp;"
-                        "<b>Precision</b> = of all positive predictions, how many were truly positive (avoids false alarms). &nbsp;"
-                        "<b>Recall</b> = of all actual positives, how many did we correctly identify (avoids missed cases). &nbsp;"
-                        "<b>F1 Score</b> = balance between Precision and Recall — most useful when classes are imbalanced."
-                    )
-
-                    st.markdown(f"**{k_folds}-Fold Cross-Validation Averages** *(more reliable, averaged across {k_folds} runs)*")
+            
+                    st.markdown(f"**{k_folds}-Fold CV Scores**")
                     k1, k2, k3, k4 = st.columns(4)
                     k1.metric("Avg Accuracy",  f"{avg_acc:.4f}")
                     k2.metric("Avg Precision", f"{avg_prec:.4f}")
                     k3.metric("Avg Recall",    f"{avg_rec:.4f}")
-                    k4.metric("Avg F1 Score",  f"{avg_f1:.4f}")
-
-                    # Grouped bar chart
-                    metrics_df = pd.DataFrame({
-                        "Metric":        ["Accuracy", "Precision", "Recall", "F1 Score"],
-                        "Test Score":    [acc,      prec,      rec,    f1],
-                        "CV Avg Score":  [avg_acc,  avg_prec,  avg_rec, avg_f1],
-                    })
-                    fig_bar = px.bar(
-                        metrics_df.melt(id_vars="Metric", var_name="Evaluation", value_name="Score"),
-                        x="Metric", y="Score", color="Evaluation", barmode="group",
-                        color_discrete_sequence=["#FF4B4B", "#4a7cff"],
-                        range_y=[0, 1],
-                        title="Performance Metrics — Test Set vs K-Fold Average"
-                    )
-                    st.plotly_chart(fig_bar, use_container_width=True)
-
-                    # Confusion Matrix
-                    st.subheader("Confusion Matrix")
-                    info_box(
-                        "Each cell shows how many samples were predicted as a given class vs their actual class. "
-                        "Diagonal = correct predictions. Off-diagonal = mistakes."
-                    )
+                    k4.metric("Avg F1",        f"{avg_f1:.4f}")
+            
+                    # ───────────────── OVERFITTING CHECK ─────────────────
+                    st.markdown("---")
+                    st.subheader("🧠 Model Diagnosis")
+            
+                    d1, d2 = st.columns(2)
+                    d1.metric("Train Accuracy", f"{train_acc:.4f}")
+                    d2.metric("Test Accuracy",  f"{acc:.4f}")
+            
+                    gap = abs(train_acc - acc)
+                    st.write(f"Generalization Gap: {gap:.4f}")
+            
+                    if train_acc - acc > 0.1:
+                        st.error("🔴 Overfitting detected! Model memorizing training data.")
+                    elif train_acc < 0.6 and acc < 0.6:
+                        st.warning("🟡 Underfitting detected! Model too simple.")
+                    else:
+                        st.success("🟢 Model is well balanced!")
+            
+                    # ── CONFUSION MATRIX ──
                     cm = confusion_matrix(y_test, y_pred)
                     fig_cm = px.imshow(cm, text_auto=True, color_continuous_scale="Reds",
                                        labels={"x": "Predicted", "y": "Actual"},
                                        title="Confusion Matrix")
                     st.plotly_chart(fig_cm, use_container_width=True)
-
-                # ── REGRESSION ──
+            
+                # ───────────────── REGRESSION ─────────────────
                 else:
                     r2   = r2_score(y_test, y_pred)
                     rmse = np.sqrt(mean_squared_error(y_test, y_pred))
                     mae  = mean_absolute_error(y_test, y_pred)
-
+            
+                    # 🔹 TRAIN SCORE
+                    train_pred = model.predict(X_train_s)
+                    train_r2 = r2_score(y_train, train_pred)
+            
+                    # 🔹 CROSS VALIDATION
                     cv = KFold(n_splits=k_folds, shuffle=True, random_state=42)
                     cv_res = cross_validate(
                         model, X_all_s, y, cv=cv,
                         scoring=["r2", "neg_mean_squared_error", "neg_mean_absolute_error"]
                     )
+            
                     avg_r2   = cv_res["test_r2"].mean()
                     avg_rmse = np.sqrt((-cv_res["test_neg_mean_squared_error"]).mean())
                     avg_mae  = (-cv_res["test_neg_mean_absolute_error"]).mean()
-
+            
+                    # ── METRICS UI ──
                     st.markdown("**Test Set Scores**")
                     c1, c2, c3 = st.columns(3)
-                    c1.metric("R² Score", f"{r2:.4f}")
-                    c2.metric("RMSE",     f"{rmse:.4f}")
-                    c3.metric("MAE",      f"{mae:.4f}")
-
-                    st.markdown(f"**{k_folds}-Fold Cross-Validation Averages**")
+                    c1.metric("R²",   f"{r2:.4f}")
+                    c2.metric("RMSE", f"{rmse:.4f}")
+                    c3.metric("MAE",  f"{mae:.4f}")
+            
+                    st.markdown(f"**{k_folds}-Fold CV Scores**")
                     k1, k2, k3 = st.columns(3)
                     k1.metric("Avg R²",   f"{avg_r2:.4f}")
                     k2.metric("Avg RMSE", f"{avg_rmse:.4f}")
                     k3.metric("Avg MAE",  f"{avg_mae:.4f}")
-
-                    info_box(
-                        "<b>R²</b> = proportion of target variance explained by the model (1.0 = perfect). &nbsp;"
-                        "<b>RMSE</b> = average prediction error in the target's units — penalises large errors more. &nbsp;"
-                        "<b>MAE</b> = average absolute error — treats all errors equally regardless of size."
-                    )
-
-                    metrics_df = pd.DataFrame({
-                        "Metric":       ["R²",    "RMSE",     "MAE"],
-                        "Test Score":   [r2,      rmse,       mae],
-                        "CV Avg Score": [avg_r2,  avg_rmse,   avg_mae],
-                    })
-                    fig_bar = px.bar(
-                        metrics_df.melt(id_vars="Metric", var_name="Evaluation", value_name="Score"),
-                        x="Metric", y="Score", color="Evaluation", barmode="group",
-                        color_discrete_sequence=["#FF4B4B", "#4a7cff"],
-                        title="Regression Metrics — Test Set vs K-Fold Average"
-                    )
-                    st.plotly_chart(fig_bar, use_container_width=True)
-
+            
+                    # ───────────────── OVERFITTING CHECK ─────────────────
+                    st.markdown("---")
+                    st.subheader("🧠 Model Diagnosis")
+            
+                    d1, d2 = st.columns(2)
+                    d1.metric("Train R²", f"{train_r2:.4f}")
+                    d2.metric("Test R²",  f"{r2:.4f}")
+            
+                    gap = abs(train_r2 - r2)
+                    st.write(f"Generalization Gap: {gap:.4f}")
+            
+                    if train_r2 - r2 > 0.2:
+                        st.error("🔴 Overfitting detected!")
+                    elif train_r2 < 0.5 and r2 < 0.5:
+                        st.warning("🟡 Underfitting detected!")
+                    else:
+                        st.success("🟢 Model is well balanced!")
+            
                 st.success("✅ Training complete!")
-
+            
             except Exception as e:
                 st.error(f"Training failed: {e}")
-                st.info("Make sure you have completed Data Cleaning and Feature Selection before training.")
-
