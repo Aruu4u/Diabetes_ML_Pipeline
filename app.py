@@ -688,39 +688,55 @@ elif page == "Feature Selection":
     
     # ───────── INFORMATION GAIN ─────────
     elif method == "Information Gain":
-        st.info("Select features based on information gain (mutual information)")
-            # 🔥 FIX START
+        st.info("Select features based on information gain")
+    
+        # ✅ Step 1: combine
         df_temp = pd.concat([X, y], axis=1)
+    
+        # ✅ Step 2: remove rows where target is NaN
         df_temp = df_temp.dropna(subset=[target])
     
-        X_clean = df_temp.drop(columns=[target]).fillna(0)
+        # ✅ Step 3: separate again
+        X_clean = df_temp.drop(columns=[target])
         y_clean = df_temp[target]
-    # 🔥 FIX END
     
-        if task == "classification":
-            mi = mutual_info_classif(X.fillna(0), y)
-        else:
-            mi = mutual_info_regression(X.fillna(0), y)
+        # ✅ Step 4: fill NaN in X
+        X_clean = X_clean.fillna(0)
     
-        mi_series = pd.Series(mi, index=X.columns)
+        # 🔥 DEBUG (important)
+        st.write("NaN in target:", y_clean.isnull().sum())
     
-        fig = px.bar(
-            mi_series.sort_values(),
-            orientation="h",
-            color=mi_series,
-            color_continuous_scale="Reds",
-            title="Information Gain (Mutual Information)"
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        # ✅ Step 5: MI calculation
+        try:
+            if task == "classification":
+                mi = mutual_info_classif(X_clean, y_clean)
+            else:
+                mi = mutual_info_regression(X_clean, y_clean)
     
-        threshold = st.slider("Information Gain Threshold", 0.0, float(mi_series.max()), 0.01)
+            mi_series = pd.Series(mi, index=X_clean.columns)
     
-        selected_features = mi_series[mi_series > threshold].index.tolist()
+            fig = px.bar(
+                mi_series.sort_values(),
+                orientation="h",
+                color=mi_series,
+                color_continuous_scale="Reds",
+                title="Information Gain"
+            )
+            st.plotly_chart(fig, use_container_width=True)
     
-        st.success(f"Selected {len(selected_features)} features")
+            threshold = st.slider(
+                "Information Gain Threshold",
+                0.0,
+                float(mi_series.max()),
+                0.01
+            )
     
-    else:
-        st.info("No feature selection applied")
+            selected_features = mi_series[mi_series > threshold].index.tolist()
+    
+            st.success(f"Selected {len(selected_features)} features")
+    
+        except Exception as e:
+            st.error(f"MI failed: {e}")
     
     # ───────── FINAL OUTPUT ─────────
     st.markdown("---")
