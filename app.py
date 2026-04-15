@@ -751,11 +751,11 @@ elif page == "Feature Selection":
 elif page == "Model Training":
     st.title("🤖 Model Training")
 
-    info_box(
-        "This is where the model is built and rigorously evaluated. "
-        "The pipeline: split data → scale features → train model → evaluate on held-out test data → "
-        "validate stability with K-Fold cross-validation."
-    )
+    # info_box(
+    #     "This is where the model is built and rigorously evaluated. "
+    #     "The pipeline: split data → scale features → train model → evaluate on held-out test data → "
+    #     "validate stability with K-Fold cross-validation."
+    # )
 
     df_used = st.session_state.get("df_clean", df.select_dtypes(include=np.number))
     features = st.session_state.get("selected_features", list(df_used.columns[:-1]))
@@ -774,11 +774,19 @@ elif page == "Model Training":
     y = df_used[target]
 
     if task == "classification":
-        y, le = encode_target(y)
-        model_options = ["Logistic Regression", "Random Forest"]
+        model_options = [
+            "Logistic Regression (RECOMMENDED)",
+            "Random Forest",
+            "SVM",
+            "KNN"
+        ]
     else:
-        le = None
-        model_options = ["Linear Regression", "Random Forest"]
+        model_options = [
+            "Linear Regression (RECOMMENDED)",
+            "Random Forest",
+            "SVR",
+            "KNN Regressor"
+        ]
 
     st.markdown("---")
     st.subheader("Training Settings")
@@ -821,14 +829,33 @@ elif page == "Model Training":
             X_test_s  = scaler.transform(X_test)
             X_all_s   = scaler.fit_transform(X)
 
+            # if task == "classification":
+            #     model = (LogisticRegression(max_iter=1000)
+            #              if model_type == "Logistic Regression"
+            #              else RandomForestClassifier(n_estimators=100, random_state=42))
+            # else:
+            #     model = (LinearRegression()
+            #              if model_type == "Linear Regression"
+            #              else RandomForestRegressor(n_estimators=100, random_state=42))
             if task == "classification":
-                model = (LogisticRegression(max_iter=1000)
-                         if model_type == "Logistic Regression"
-                         else RandomForestClassifier(n_estimators=100, random_state=42))
+                if "Logistic" in model_type:
+                    model = LogisticRegression(max_iter=1000)
+                elif "Random Forest" in model_type:
+                    model = RandomForestClassifier(n_estimators=100, random_state=42)
+                elif "SVM" in model_type:
+                    model = SVC()
+                elif "KNN" in model_type:
+                    model = KNeighborsClassifier()
+            
             else:
-                model = (LinearRegression()
-                         if model_type == "Linear Regression"
-                         else RandomForestRegressor(n_estimators=100, random_state=42))
+                if "Linear" in model_type:
+                    model = LinearRegression()
+                elif "Random Forest" in model_type:
+                    model = RandomForestRegressor(n_estimators=100, random_state=42)
+                elif "SVR" in model_type:
+                    model = SVR()
+                elif "KNN" in model_type:
+                    model = KNeighborsRegressor()
 
             try:
                 model.fit(X_train_s, y_train)
