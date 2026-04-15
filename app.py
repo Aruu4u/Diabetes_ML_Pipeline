@@ -171,7 +171,7 @@ if page == "Dashboard":
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Rows", len(df))
     col2.metric("Total Columns", len(df.columns))
-    col3.metric("Missing Values", int(df.isnull().sum().sum()))
+    # col3.metric("Missing Values", int(df.isnull().sum().sum()))
     col4.metric("Numeric Columns", len(df.select_dtypes(include=np.number).columns))
 
     st.subheader("Raw Data Preview")
