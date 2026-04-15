@@ -62,27 +62,97 @@ def get_per_col_outliers(df_numeric):
         counts[col] = int(mask.sum())
     return pd.Series(counts)
 
+# # ─────────────────────────── SIDEBAR ───────────────────────────
+# st.sidebar.title("🛠️ ML Workspace")
+# uploaded_file = st.sidebar.file_uploader("📁 Upload your CSV dataset", type=["csv"])
+
+# if uploaded_file is not None:
+#     df = pd.read_csv(uploaded_file)
+#     st.sidebar.success("Dataset loaded ✅")
+# else:
+#     st.title("👋 Welcome to the ML Pipeline Dashboard")
+#     st.markdown("""
+#     Upload a **CSV file** using the sidebar on the left to begin your machine learning workflow.
+
+#     **The pipeline covers:**
+#     1. 📊 **Dashboard** — Dataset overview & statistics
+#     2. 🔍 **EDA** — Distributions & correlations
+#     3. 🧹 **Data Cleaning** — Handle missing values & outliers
+#     4. 🎯 **Feature Selection** — Pick the most useful columns
+#     5. 🤖 **Model Training** — Train, evaluate & validate your model
+#     """)
+#     st.stop()
+
+# page = st.sidebar.selectbox("Navigate", [
+#     "Dashboard",
+#     "EDA",
+#     "Data Cleaning",
+#     "Feature Selection",
+#     "Model Training",
+# ])
 # ─────────────────────────── SIDEBAR ───────────────────────────
 st.sidebar.title("🛠️ ML Workspace")
-uploaded_file = st.sidebar.file_uploader("📁 Upload your CSV dataset", type=["csv"])
 
-if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
-    st.sidebar.success("Dataset loaded ✅")
+# 🎯 STEP 1: Problem Type
+problem_type = st.sidebar.radio(
+    "🎯 Select Problem Type",
+    ["Auto Detect", "Classification", "Regression"]
+)
+
+# 📂 STEP 2: Data Source
+data_source = st.sidebar.radio(
+    "📁 Select Data Source",
+    ["Upload CSV", "Use Sample Dataset"]
+)
+
+# 📊 Sample datasets option
+if data_source == "Use Sample Dataset":
+    sample_option = st.sidebar.selectbox(
+        "Choose Dataset",
+        ["Diabetes", "Titanic", "Housing"]
+    )
+
+    if sample_option == "Diabetes":
+        df = pd.read_csv("https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.data.csv")
+        df.columns = ["Pregnancies","Glucose","BloodPressure","SkinThickness","Insulin","BMI","DPF","Age","Outcome"]
+
+    elif sample_option == "Titanic":
+        df = pd.read_csv("https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv")
+
+    elif sample_option == "Housing":
+        df = pd.read_csv("https://raw.githubusercontent.com/selva86/datasets/master/BostonHousing.csv")
+
+    st.sidebar.success(f"{sample_option} dataset loaded ✅")
+
+# 📁 Upload CSV option
 else:
-    st.title("👋 Welcome to the ML Pipeline Dashboard")
-    st.markdown("""
-    Upload a **CSV file** using the sidebar on the left to begin your machine learning workflow.
+    uploaded_file = st.sidebar.file_uploader("Upload your CSV dataset", type=["csv"])
 
-    **The pipeline covers:**
-    1. 📊 **Dashboard** — Dataset overview & statistics
-    2. 🔍 **EDA** — Distributions & correlations
-    3. 🧹 **Data Cleaning** — Handle missing values & outliers
-    4. 🎯 **Feature Selection** — Pick the most useful columns
-    5. 🤖 **Model Training** — Train, evaluate & validate your model
-    """)
-    st.stop()
+    if uploaded_file is not None:
+        df = pd.read_csv(uploaded_file)
+        st.sidebar.success("Dataset loaded ✅")
+    else:
+        st.title("👋 Welcome to the ML Pipeline Dashboard")
+        st.markdown("""
+        ### 🚀 Start Your ML Journey
 
+        1. Select **Problem Type**
+        2. Choose **Data Source**
+        3. Upload dataset or use sample
+
+        **Pipeline includes:**
+        - 📊 Dashboard
+        - 🔍 EDA
+        - 🧹 Data Cleaning
+        - 🎯 Feature Selection
+        - 🤖 Model Training
+        """)
+        st.stop()
+
+# 🧠 Store problem type
+st.session_state["problem_type"] = problem_type
+
+# 📌 Navigation
 page = st.sidebar.selectbox("Navigate", [
     "Dashboard",
     "EDA",
@@ -90,7 +160,6 @@ page = st.sidebar.selectbox("Navigate", [
     "Feature Selection",
     "Model Training",
 ])
-
 # ═══════════════════════════ DASHBOARD ═══════════════════════════
 if page == "Dashboard":
     st.title("📊 Dataset Overview")
