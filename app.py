@@ -781,7 +781,41 @@ elif page == "Model Training":
         f"Input features (what we use): <b>{len(features)} columns</b> → {features}"
     )
 
-    X = df_used[features].fillna(0)
+
+    
+        # 🔥 STEP 1: get features safely
+    features = st.session_state.get("features")
+    
+    if not features:
+        st.error("❌ No features found. Run Feature Selection first.")
+        st.stop()
+    
+    # 🔥 STEP 2: ensure df_used exists
+    df_used = st.session_state.get("df_clean")
+    
+    if df_used is None:
+        st.error("❌ Clean dataset not found. Run Data Cleaning first.")
+        st.stop()
+    
+    # 🔥 STEP 3: FIX KEYERROR (only keep valid columns)
+    valid_features = [col for col in features if col in df_used.columns]
+    
+    missing_features = list(set(features) - set(valid_features))
+    
+    if missing_features:
+        st.warning(f"⚠️ Missing columns removed: {missing_features}")
+    
+    if len(valid_features) == 0:
+        st.error("❌ No valid features available after cleaning")
+        st.stop()
+    
+    # 🔥 FINAL SAFE DATAFRAME
+    X = df_used[valid_features].fillna(0)
+    features = valid_features  # overwrite for consistency
+
+
+
+    
     y = df_used[target]
 
     if task == "classification":
