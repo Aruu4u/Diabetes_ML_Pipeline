@@ -119,7 +119,7 @@ if page == "Dashboard":
         st.warning("Need at least 2 numeric columns for PCA")
     else:
         # 🎯 Target selection
-        target_col = st.selectbox("🎯 Select Target Column (optional)", ["None"] + list(numeric_df.columns))
+        target_col = st.selectbox("🎯 Select Target Column ", ["None"] + list(numeric_df.columns))
         
         # 🎛 Feature selection
         st.markdown("### 🔧 Select Features for PCA")
@@ -173,7 +173,7 @@ if page == "Dashboard":
             st.info(f"PC1 explains {var1:.2%} variance, PC2 explains {var2:.2%}")
         
             # 📌 Shape insight
-            st.markdown("### 📐 Data Shape Insight")
+            st.markdown("###  Data Shape Insight")
             st.write(f"Original Shape: {df.shape}")
             st.write(f"Selected Feature Shape: {X.shape}")
 
