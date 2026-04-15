@@ -1063,6 +1063,10 @@ elif page == "Prediction":
 
             # Create input dataframe
             features = st.session_state.get("features")
+                        
+            if not features:
+                st.error("❌ Features not found. Please complete Feature Selection + Training first.")
+                st.stop()
             # df_used = st.session_state.get("df_clean")
             
             input_dict = {
@@ -1076,10 +1080,7 @@ elif page == "Prediction":
                 "Age": age
             }
             
-            input_data = pd.DataFrame(columns=features)
-            
-            for col in features:
-                input_data[col] = [input_dict.get(col, 0)]
+            input_data = pd.DataFrame([{col: input_dict.get(col, 0) for col in features}])
             # Scale input
             # if scaler is not None:
             #     input_scaled = scaler.transform(input_data)
