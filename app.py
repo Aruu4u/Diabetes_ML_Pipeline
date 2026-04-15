@@ -909,20 +909,41 @@ elif page == "Model Training":
                     # ───────────────── OVERFITTING CHECK ─────────────────
                     st.markdown("---")
                     st.subheader("🧠 Model Diagnosis")
-            
+                    
                     d1, d2 = st.columns(2)
                     d1.metric("Train Accuracy", f"{train_acc:.4f}")
                     d2.metric("Test Accuracy",  f"{acc:.4f}")
-            
+                    
                     gap = abs(train_acc - acc)
                     st.write(f"Generalization Gap: {gap:.4f}")
-            
+                    
+                    # ───── SMART RECOMMENDATIONS ─────
                     if train_acc - acc > 0.1:
                         st.error("🔴 Overfitting detected! Model memorizing training data.")
+                    
+                        st.markdown("### 💡 Recommendations:")
+                        st.write("• Increase **Test Size** (more unseen data)")
+                        st.write("• Use a **simpler model** (try Logistic Regression)")
+                        st.write("• Reduce number of features")
+                        st.write("• Apply stronger **regularization**")
+                        st.write("• Try **more data** if possible")
+                    
                     elif train_acc < 0.6 and acc < 0.6:
                         st.warning("🟡 Underfitting detected! Model too simple.")
+                    
+                        st.markdown("### 💡 Recommendations:")
+                        st.write("• Use a **more powerful model** (Random Forest / SVM)")
+                        st.write("• Add more relevant features")
+                        st.write("• Reduce excessive data cleaning")
+                        st.write("• Train for more iterations")
+                        st.write("• Try decreasing Test Size slightly")
+                    
                     else:
                         st.success("🟢 Model is well balanced!")
+                    
+                        st.markdown("### 💡 Suggestions:")
+                        st.write("• Model is performing well ✅")
+
             
                     # ── CONFUSION MATRIX ──
                     cm = confusion_matrix(y_test, y_pred)
@@ -968,20 +989,41 @@ elif page == "Model Training":
                     # ───────────────── OVERFITTING CHECK ─────────────────
                     st.markdown("---")
                     st.subheader("🧠 Model Diagnosis")
-            
+                    
                     d1, d2 = st.columns(2)
                     d1.metric("Train R²", f"{train_r2:.4f}")
                     d2.metric("Test R²",  f"{r2:.4f}")
-            
+                    
                     gap = abs(train_r2 - r2)
                     st.write(f"Generalization Gap: {gap:.4f}")
-            
+                    
+                    # ───── SMART RECOMMENDATIONS ─────
                     if train_r2 - r2 > 0.2:
                         st.error("🔴 Overfitting detected!")
+                    
+                        st.markdown("### 💡 Recommendations:")
+                        st.write("• Increase **Test Size**")
+                        st.write("• Use simpler model (Linear Regression)")
+                        st.write("• Reduce number of features")
+                        st.write("• Apply feature selection")
+                        st.write("• Collect more data")
+                    
                     elif train_r2 < 0.5 and r2 < 0.5:
                         st.warning("🟡 Underfitting detected!")
+                    
+                        st.markdown("### 💡 Recommendations:")
+                        st.write("• Use advanced model (Random Forest / SVR)")
+                        st.write("• Add more features")
+                        st.write("• Reduce aggressive outlier removal")
+                        st.write("• Try feature engineering")
+                        st.write("• Decrease Test Size slightly")
+                    
                     else:
                         st.success("🟢 Model is well balanced!")
+                    
+                        st.markdown("### 💡 Suggestions:")
+                        st.write("• Try hyperparameter tuning")
+                        st.write("• Experiment with different models")
             
                 st.success("✅ Training complete!")
             
