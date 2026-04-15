@@ -689,6 +689,13 @@ elif page == "Feature Selection":
     # ───────── INFORMATION GAIN ─────────
     elif method == "Information Gain":
         st.info("Select features based on information gain (mutual information)")
+            # 🔥 FIX START
+        df_temp = pd.concat([X, y], axis=1)
+        df_temp = df_temp.dropna(subset=[target])
+    
+        X_clean = df_temp.drop(columns=[target]).fillna(0)
+        y_clean = df_temp[target]
+    # 🔥 FIX END
     
         if task == "classification":
             mi = mutual_info_classif(X.fillna(0), y)
