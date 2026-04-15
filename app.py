@@ -828,14 +828,17 @@ elif page == "Model Training":
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, test_size=test_size, random_state=42
             )
-            scaler = StandardScaler()
-            X_train_s = scaler.fit_transform(X_train)
-            X_test_s  = scaler.transform(X_test)
-            X_all_s   = scaler.fit_transform(X)
-            scaler = StandardScaler()
-
-            X_train_s = scaler.fit_transform(X_train)
-            X_test_s = scaler.transform(X_test)
+            # scaler = StandardScaler()
+            # X_train_s = scaler.fit_transform(X_train)
+            # X_test_s  = scaler.transform(X_test)
+            # X_all_s   = scaler.fit_transform(X)
+            # scaler = StandardScaler()
+            # X_train_s = scaler.fit_transform(X_train)
+            # X_test_s = scaler.transform(X_test)
+              scaler = StandardScaler()
+              X_train_s = scaler.fit_transform(X_train)
+              X_test_s  = scaler.transform(X_test)
+              X_all_s   = scaler.transform(X)
 
             # if task == "classification":
             #     model = (LogisticRegression(max_iter=1000)
@@ -869,6 +872,7 @@ elif page == "Model Training":
                 model.fit(X_train_s, y_train)
                 st.session_state["trained_model"] = model
                 st.session_state["scaler"] = scaler
+                st.session_state["selected_features"] = features
                 y_pred = model.predict(X_test_s)
             
                 st.markdown("---")
@@ -1063,7 +1067,7 @@ elif page == "Prediction":
                 st.stop()
 
             # Create input dataframe
-            features = st.session_state.get("features")
+            features = st.session_state.get("selected_features")
                         
             if not features:
                 st.error("❌ Features not found. Please complete Feature Selection + Training first.")
